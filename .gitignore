@@ -16,6 +16,9 @@
 !/requirements.txt
 !/settings.example.json
 !/README.md
+!/LICENSE
+!/docs/
+!/docs/**
 !/Python AI Script Roadmap.txt
 !/main.py
 !/src/
