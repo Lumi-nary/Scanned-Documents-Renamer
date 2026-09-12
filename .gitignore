@@ -1,0 +1,71 @@
+# ==============================================================================
+# ScanSnap AI Pipeline - Git Ignore Rules (Zero-Disclosure Policy)
+# ==============================================================================
+
+# 1. Root-level Allowlist:
+# Ignores ALL files and folders in root by default so client folders and local
+# files are NEVER tracked and their names are NEVER disclosed in this file.
+/*
+
+# 2. Whitelist only official codebase files & directories:
+!/.gitignore
+!/.dockerignore
+!/.env.example
+!/Dockerfile
+!/docker-compose.yml
+!/requirements.txt
+!/settings.example.json
+!/README.md
+!/Python AI Script Roadmap.txt
+!/main.py
+!/src/
+!/src/**
+!/tests/
+!/tests/**
+!/deployment/
+!/deployment/**
+
+
+# 3. Exclude sensitive local configs, secrets, and data inside tracked trees:
+settings.json
+.env
+.env.*
+!.env.example
+*.pdf
+*.docx
+Temporary/
+output/
+[Ss]canned*
+
+# 4. Python bytecode, environments, and test caches:
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+ENV/
+
+# 5. Logs, Databases, and Runtime signals:
+*.log
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.tmp
+.wrap
+
+# 6. IDEs and System Artifacts:
+.vscode/
+.idea/
+*.sublime-*
+.gemini/
+.agents/
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini

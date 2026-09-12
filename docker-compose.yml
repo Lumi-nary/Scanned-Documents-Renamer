@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  ai-ingest:
+    build: .
+    container_name: ai_ingestion_pipeline
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AI_PROVIDER=deepseek
+      - AI_API_KEY=${AI_API_KEY:-your-api-key-here}
+      - NUM_WORKERS=2
+    volumes:
+      - ./FolderName1/Temporary:/app/FolderName1/Temporary
+      - ./FolderName2/Temporary:/app/FolderName2/Temporary
+      - ./output:/app/output
+    restart: always

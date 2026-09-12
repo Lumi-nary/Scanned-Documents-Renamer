@@ -1,0 +1,17 @@
+[Unit]
+Description=Automated File-Driven AI Ingestion Pipeline Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ai-ingest
+Environment="PYTHONUNBUFFERED=1"
+Environment="AI_PROVIDER=deepseek"
+Environment="AI_API_KEY=your-api-key-here"
+ExecStart=/usr/bin/python3 main.py --watch-dir /opt/ai-ingest/FolderName1/Temporary
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

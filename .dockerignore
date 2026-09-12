@@ -1,0 +1,32 @@
+# Git and IDE
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+.gemini
+.agents
+
+# Secrets and Local Configurations
+settings.json
+.env
+.env.*
+!.env.example
+
+# Document files and runtime directories
+*.pdf
+*.docx
+Temporary/
+output/
+
+# Python caches
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+.venv
+venv
+env
