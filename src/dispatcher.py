@@ -49,8 +49,8 @@ class AIAPIDispatcher:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}",
-            "HTTP-Referer": "https://github.com/ScanSnap-AI",
-            "X-Title": "ScanSnap AI"
+            "HTTP-Referer": "https://github.com/Lumi-nary/Scanned-Documents-Renamer",
+            "X-Title": "Scanned Documents Renamer"
         }
         
         content_payload = user_content if user_content is not None else prompt_text
