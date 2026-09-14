@@ -84,7 +84,9 @@ The dispatcher adds bearer auth, a request timeout, and exponential backoff with
 
 For non-technical users and office staff who don't have Python installed:
 
-- **Dedicated Windows Installer:** Run `ScannedDocumentsRenamer_Setup_v1.0.0.exe` (found in `dist/installer/`). It provides a standard Windows setup wizard, creates Start Menu and Desktop shortcuts, and sets up an uninstaller.
+[![Download Windows Installer](https://img.shields.io/badge/Download-Windows%20Setup%20Installer%20v1.0.0-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)
+
+- **Dedicated Windows Installer:** Download and run [ScannedDocumentsRenamer_Setup_v1.0.0.exe](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe) directly. It provides a full Windows setup wizard, creates Start Menu and Desktop shortcuts, and sets up a clean uninstaller.
 - **Portable Mode:** Run `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive without installing.
 - **Native Windows folder dialogs:** Pick your scanner's destination folder visually with a standard "Browse..." button.
 - **Visual Settings:** Configure AI providers (OpenRouter, DeepSeek, OpenAI, Groq, or Mock offline mode), models, and API keys without editing JSON files.
