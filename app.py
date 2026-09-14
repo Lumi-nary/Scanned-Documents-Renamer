@@ -22,23 +22,24 @@ class DesktopBridgeAPI:
     """
     Python API bridge exposed directly to the PyWebView JavaScript runtime.
     Methods defined here are callable from JavaScript via `window.pywebview.api.<method>()`.
+    Internal attributes must start with an underscore to prevent PyWebView reflection recursion.
     """
     def __init__(self, daemon: PipelineDaemon, settings_file: str = "settings.json"):
-        self.daemon = daemon
-        self.settings_file = settings_file
-        self.window: Optional[webview.Window] = None
+        self._daemon = daemon
+        self._settings_file = settings_file
+        self._window: Optional[webview.Window] = None
 
         # Register event forwarding to webview UI
-        self.daemon.add_listener(self._forward_event_to_js)
+        self._daemon.add_listener(self._forward_event_to_js)
 
     def set_window(self, window: webview.Window) -> None:
-        self.window = window
+        self._window = window
 
     def _forward_event_to_js(self, event: Dict[str, Any]) -> None:
-        if self.window:
+        if self._window:
             try:
                 json_payload = json.dumps(event)
-                self.window.evaluate_js(f"window.onPipelineEvent({json_payload});")
+                self._window.evaluate_js(f"window.onPipelineEvent({json_payload});")
             except Exception as e:
                 logger.debug(f"Could not forward event to JS: {e}")
 
@@ -47,30 +48,54 @@ class DesktopBridgeAPI:
         Supplies the GUI frontend with initial status, settings, and recent documents.
         """
         return {
-            "status": self.daemon.get_status(),
-            "settings": self.daemon.config.to_dict(),
-            "recent_records": self.daemon.get_recent_records(50)
+            "status": self._daemon.get_status(),
+            "settings": self._daemon.config.to_dict(),
+            "recent_records": self._daemon.get_recent_records(50)
         }
 
     def browse_folder(self) -> Optional[str]:
         """
         Opens native Windows folder selection dialog and returns chosen path.
         """
-        if not self.window:
-            return None
-        
+        initial_dir = ""
+        if self._daemon.config.watch_directories:
+            initial_dir = self._daemon.config.watch_directories[0]
+        if not initial_dir or not os.path.exists(initial_dir):
+            initial_dir = os.getcwd()
+
+        # 1. Primary: PyWebView native file dialog
+        if self._window:
+            try:
+                result = self._window.create_file_dialog(
+                    dialog_type=FileDialog.FOLDER,
+                    allow_multiple=False,
+                    directory=initial_dir
+                )
+                if result and len(result) > 0:
+                    selected_dir = result[0]
+                    logger.info(f"Folder selected via dialog: {selected_dir}")
+                    return selected_dir
+            except Exception as e:
+                logger.warning(f"pywebview create_file_dialog error: {e}. Falling back to native Windows dialog...")
+
+        # 2. Secondary fallback: Native Windows Forms FolderBrowserDialog
         try:
-            result = self.window.create_file_dialog(
-                dialog_type=FileDialog.FOLDER,
-                allow_multiple=False,
-                directory=self.daemon.config.watch_directories[0] if self.daemon.config.watch_directories else os.getcwd()
+            escaped_init = initial_dir.replace("'", "''")
+            ps_script = (
+                "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; "
+                "$f = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                "$f.Description = 'Select Scanner Output / Watch Folder'; "
+                f"$f.SelectedPath = '{escaped_init}'; "
+                "if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.SelectedPath }"
             )
-            if result and len(result) > 0:
-                selected_dir = result[0]
-                logger.info(f"Folder selected via dialog: {selected_dir}")
-                return selected_dir
+            res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True, timeout=60)
+            chosen = res.stdout.strip()
+            if chosen and os.path.isdir(chosen):
+                logger.info(f"Folder selected via native fallback: {chosen}")
+                return chosen
         except Exception as e:
-            logger.error(f"Error opening folder picker dialog: {e}")
+            logger.error(f"Fallback folder picker error: {e}")
+
         return None
 
     def save_settings(self, settings_dict: Dict[str, Any]) -> Dict[str, Any]:
@@ -78,7 +103,7 @@ class DesktopBridgeAPI:
         Saves updated settings to settings.json and refreshes daemon configuration.
         """
         try:
-            cfg = self.daemon.config
+            cfg = self._daemon.config
             if "watch_directories" in settings_dict:
                 cfg.watch_directories = [os.path.abspath(p) for p in settings_dict["watch_directories"] if p]
                 if cfg.watch_directories:
@@ -101,10 +126,10 @@ class DesktopBridgeAPI:
                 cfg.update_clients_docx = bool(settings_dict["update_clients_docx"])
 
             # Persist to settings.json
-            cfg.save(self.settings_file)
+            cfg.save(self._settings_file)
 
             # Update daemon watch directories if running
-            self.daemon.update_watch_directories(cfg.watch_directories)
+            self._daemon.update_watch_directories(cfg.watch_directories)
             logger.info("Settings updated and saved successfully.")
             return {"success": True, "settings": cfg.to_dict()}
         except Exception as e:
@@ -115,34 +140,34 @@ class DesktopBridgeAPI:
         """
         Starts the background ingestion daemon.
         """
-        is_mock = self.daemon.config.provider.lower() == "mock"
-        started = self.daemon.start(mock_mode=is_mock)
-        return {"success": started, "status": self.daemon.get_status()}
+        is_mock = self._daemon.config.provider.lower() == "mock"
+        started = self._daemon.start(mock_mode=is_mock)
+        return {"success": started, "status": self._daemon.get_status()}
 
     def stop_pipeline(self) -> Dict[str, Any]:
         """
         Stops the background ingestion daemon.
         """
-        stopped = self.daemon.stop()
-        return {"success": stopped, "status": self.daemon.get_status()}
+        stopped = self._daemon.stop()
+        return {"success": stopped, "status": self._daemon.get_status()}
 
     def trigger_wrapup(self) -> List[Dict[str, Any]]:
         """
         Executes immediate batch wrap-up on unprocessed documents.
         """
-        return self.daemon.trigger_wrapup()
+        return self._daemon.trigger_wrapup()
 
     def reset_active_client(self) -> None:
         """
         Resets sticky active client context.
         """
-        self.daemon.reset_active_client()
+        self._daemon.reset_active_client()
 
     def set_active_client(self, client_name: str) -> None:
         """
         Sets sticky active client context.
         """
-        self.daemon.set_active_client(client_name)
+        self._daemon.set_active_client(client_name)
 
     def reveal_in_explorer(self, target_path: str) -> None:
         """
