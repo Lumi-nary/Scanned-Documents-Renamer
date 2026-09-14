@@ -71,6 +71,15 @@ def build():
         print(f"[ERROR] Expected GUI asset not found at: {gui_file}")
         sys.exit(1)
 
+    # Place standalone icon assets directly in distribution root for shortcuts & portable mode
+    src_ico = os.path.join(base_dir, "gui", "icon.ico")
+    src_png = os.path.join(base_dir, "gui", "icon.png")
+    if os.path.exists(src_ico):
+        shutil.copyfile(src_ico, os.path.join(dist_dir, "icon.ico"))
+        shutil.copyfile(src_ico, os.path.join(dist_dir, "app.ico"))
+    if os.path.exists(src_png):
+        shutil.copyfile(src_png, os.path.join(dist_dir, "icon.png"))
+
     total_size = get_folder_size(dist_dir)
 
     print("\n" + "=" * 65)

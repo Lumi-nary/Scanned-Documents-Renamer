@@ -11,6 +11,13 @@ from webview import FileDialog
 from src.config import PipelineConfig
 from src.pipeline_daemon import PipelineDaemon
 
+if sys.platform == "win32":
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Lumi-nary.ScannedDocumentsRenamer.App.1.0")
+    except Exception:
+        pass
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -275,12 +282,32 @@ def launch_app():
 
     window.events.closed += on_closed
 
-    icon_path = get_asset_path(os.path.join("gui", "icon.ico"))
-    if not os.path.exists(icon_path):
-        icon_path = get_asset_path(os.path.join("gui", "icon.png"))
+    icon_candidates = [
+        get_asset_path(os.path.join("gui", "icon.ico")),
+        os.path.join(os.path.dirname(sys.executable), "icon.ico"),
+        os.path.join(os.path.dirname(sys.executable), "_internal", "gui", "icon.ico"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "gui", "icon.ico")
+    ]
+    icon_path = next((p for p in icon_candidates if os.path.isfile(p)), None)
+
+    def on_shown():
+        if icon_path and sys.platform == "win32":
+            try:
+                import ctypes
+                hwnd = window.native.Handle.ToInt64()
+                hbig = ctypes.windll.user32.LoadImageW(0, icon_path, 1, 32, 32, 0x00000010)
+                hsmall = ctypes.windll.user32.LoadImageW(0, icon_path, 1, 16, 16, 0x00000010)
+                if hbig:
+                    ctypes.windll.user32.SendMessageW(hwnd, 0x0080, 1, hbig)
+                if hsmall:
+                    ctypes.windll.user32.SendMessageW(hwnd, 0x0080, 0, hsmall)
+            except Exception as e:
+                logger.debug(f"Failed to set window icon via Win32: {e}")
+
+    window.events.shown += on_shown
 
     try:
-        if os.path.exists(icon_path):
+        if icon_path:
             webview.start(debug=False, icon=icon_path)
         else:
             webview.start(debug=False)
