@@ -82,10 +82,12 @@ class DesktopBridgeAPI:
                     selected_dir = result[0]
                     logger.info(f"Folder selected via dialog: {selected_dir}")
                     return selected_dir
+                # User canceled or closed the dialog: return cleanly without falling through
+                return None
             except Exception as e:
                 logger.warning(f"pywebview create_file_dialog error: {e}. Falling back to native Windows dialog...")
 
-        # 2. Secondary fallback: Native Windows Forms FolderBrowserDialog
+        # 2. Secondary fallback: Native Windows Forms FolderBrowserDialog (only if pywebview dialog threw an exception or window is absent)
         try:
             escaped_init = initial_dir.replace("'", "''")
             ps_script = (
@@ -95,7 +97,14 @@ class DesktopBridgeAPI:
                 f"$f.SelectedPath = '{escaped_init}'; "
                 "if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.SelectedPath }"
             )
-            res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True, timeout=60)
+            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+            res = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps_script],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                creationflags=creationflags
+            )
             chosen = res.stdout.strip()
             if chosen and os.path.isdir(chosen):
                 logger.info(f"Folder selected via native fallback: {chosen}")
