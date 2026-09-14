@@ -37,9 +37,6 @@
 !/scripts/**
 !/deployment/
 !/deployment/**
-!/dist/
-!/dist/installer/
-!/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe
 
 
 # 3. Exclude sensitive local configs, secrets, and data inside tracked trees:
@@ -67,9 +64,8 @@ __pycache__/
 .coverage.*
 htmlcov/
 build/
-dist/*
-!dist/installer/
-!dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe
+dist/
+dist/**
 .venv/
 venv/
 env/
