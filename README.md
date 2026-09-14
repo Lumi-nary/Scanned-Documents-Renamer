@@ -78,13 +78,55 @@ The dispatcher adds bearer auth, a request timeout, and exponential backoff with
 
 ---
 
+---
+
+## Dedicated Windows Desktop Application & Installer
+
+For non-technical users and office staff who don't have Python installed:
+
+- **Dedicated Windows Installer:** Run `ScannedDocumentsRenamer_Setup_v1.0.0.exe` (found in `dist/installer/`). It provides a standard Windows setup wizard, creates Start Menu and Desktop shortcuts, and sets up an uninstaller.
+- **Portable Mode:** Run `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive without installing.
+- **Native Windows folder dialogs:** Pick your scanner's destination folder visually with a standard "Browse..." button.
+- **Visual Settings:** Configure AI providers (OpenRouter, DeepSeek, OpenAI, Groq, or Mock offline mode), models, and API keys without editing JSON files.
+- **Live Ingestion Feed:** Watch documents being detected, read by AI Vision OCR, renamed, and organized in real time.
+- **One-Click Explorer Access:** Click "Show in Folder" on any filed document to instantly reveal it in Windows Explorer.
+- **Zero Configuration Required:** Includes a built-in Mock mode for testing without an API key.
+
+### Building the Installer from Source
+
+```bash
+# 1. Compile the standalone executable:
+python build_exe.py
+
+# 2. Or compile the complete Windows Setup Installer:
+installer\build_installer.bat
+```
+
+---
+
 ## Quickstart
 
+### Option A: Setup Installer / Desktop App (No Python Required)
+```bash
+# Run the dedicated Windows installer wizard:
+dist\installer\ScannedDocumentsRenamer_Setup_v1.0.0.exe
+
+# Or run the portable standalone app:
+dist\ScannedDocumentsRenamer\ScannedDocumentsRenamer.exe
+```
+
+### Option B: Run from Python Source
+```bash
+# Double-click "Run Scanned Documents Renamer.bat" or run:
+python app.py
+```
+
+### Option C: Headless Command Line (For Servers & Automation)
 ```bash
 git clone https://github.com/Lumi-nary/Scanned-Documents-Renamer.git
 cd Scanned-Documents-Renamer
-pip install -r requirements.txt        # watchdog, pymupdf, python-docx
-cp settings.example.json settings.json # then fill in paths + API key
+pip install -r requirements.txt        # watchdog, pymupdf, python-docx, pywebview
+cp settings.example.json settings.json # or configure visually in the Desktop UI
 python main.py
 ```
 
@@ -113,6 +155,7 @@ export WATCH_DIR="./Temporary/Unprocessed"
 
 | Flag | Purpose |
 | --- | --- |
+| `--gui` | Launch the PyWebView Desktop GUI |
 | `--watch-dir PATH` | Add or override the directory to watch |
 | `--output-dir PATH` | Where AI response files are written |
 | `--provider NAME` | Provider preset (`openrouter`, `deepseek`, `openai`, `groq`) |
@@ -130,7 +173,7 @@ export WATCH_DIR="./Temporary/Unprocessed"
 python -m unittest discover tests
 ```
 
-Seven modules, 43 tests, all passing (`python -m unittest discover tests`): the queue and dispatcher behaviour, the stability gate, the rename and client-name rules, and an end-to-end pipeline run with synthesized PDFs.
+Nine modules, 50 tests, all passing (`python -m unittest discover tests`): Desktop GUI bridge, daemon lifecycle, the queue and dispatcher behaviour, stability gate, rename and client-name rules, and end-to-end pipeline execution with synthesized documents.
 
 ### Deployment
 

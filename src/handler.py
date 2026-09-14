@@ -18,13 +18,15 @@ class AsyncIngestionHandler(FileSystemEventHandler):
         work_queue: queue.Queue,
         allowed_extensions: Tuple[str, ...] = ('.txt', '.json', '.md', '.csv', '.log', '.pdf'),
         ignored_extensions: Tuple[str, ...] = ('.tmp', '.part', '.crdownload', '.swp', '.lock'),
-        wrapup_callback: Optional[Callable[[], None]] = None
+        wrapup_callback: Optional[Callable[[], None]] = None,
+        enqueue_callback: Optional[Callable[[str, str], None]] = None
     ):
         super().__init__()
         self.work_queue = work_queue
         self.allowed_extensions = tuple(ext.lower() for ext in allowed_extensions)
         self.ignored_extensions = tuple(ext.lower() for ext in ignored_extensions)
         self.wrapup_callback = wrapup_callback
+        self.enqueue_callback = enqueue_callback
 
     def _should_process(self, file_path: str) -> bool:
         if not file_path:
@@ -64,6 +66,11 @@ class AsyncIngestionHandler(FileSystemEventHandler):
         if self._should_process(abs_path):
             logger.info(f"{event_type} event detected: {abs_path}")
             self.work_queue.put(abs_path)
+            if self.enqueue_callback:
+                try:
+                    self.enqueue_callback(abs_path, event_type)
+                except Exception:
+                    pass
 
     def on_created(self, event: FileSystemEvent) -> None:
         if event.is_directory:

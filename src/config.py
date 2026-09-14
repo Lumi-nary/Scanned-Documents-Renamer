@@ -122,6 +122,31 @@ class PipelineConfig:
             
         return config
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Exports the configuration as a dictionary suitable for JSON serialization.
+        """
+        return {
+            "watch_directories": self.watch_directories,
+            "provider": self.provider,
+            "model_name": self.model_name,
+            "base_url": self.base_url,
+            "api_key": self.api_key,
+            "num_workers": self.num_workers,
+            "stability_timeout": self.stability_timeout,
+            "enable_wrapup": self.enable_wrapup,
+            "update_clients_docx": self.update_clients_docx
+        }
+
+    def save(self, settings_file: str = "settings.json") -> None:
+        """
+        Saves current configuration to settings_file.
+        """
+        data = self.to_dict()
+        with open(settings_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        logger.info(f"Saved configuration to {settings_file}")
+
     @classmethod
     def from_env(cls) -> "PipelineConfig":
         return cls.load("settings.json")

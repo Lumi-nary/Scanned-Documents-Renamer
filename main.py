@@ -36,7 +36,13 @@ def main():
     parser.add_argument("--disable-wrapup", action="store_true", help="Disable batch wrapup functions")
     parser.add_argument("--wrap", action="store_true", help="Signal active running pipeline daemon to wrap up current batch immediately")
     parser.add_argument("--demo", action="store_true", help="Run runtime path swapping demonstration")
+    parser.add_argument("--gui", action="store_true", help="Launch the PyWebView Desktop GUI")
     args = parser.parse_args()
+
+    if args.gui:
+        from app import launch_app
+        launch_app()
+        return
 
     setup_logging()
     logger = logging.getLogger("MainPipeline")

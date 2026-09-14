@@ -21,12 +21,25 @@
 !/docs/**
 !/Python AI Script Roadmap.txt
 !/main.py
+!/app.py
+!/Run Scanned Documents Renamer.bat
+!/gui/
+!/gui/**
+!/ScannedDocumentsRenamer.spec
+!/build_exe.py
+!/installer/
+!/installer/**
 !/src/
 !/src/**
 !/tests/
 !/tests/**
+!/scripts/
+!/scripts/**
 !/deployment/
 !/deployment/**
+!/dist/
+!/dist/installer/
+!/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe
 
 
 # 3. Exclude sensitive local configs, secrets, and data inside tracked trees:
@@ -39,6 +52,10 @@ settings.json
 Temporary/
 output/
 [Ss]canned*
+!/ScannedDocumentsRenamer.spec
+gui/assets/
+gui/assets/**
+*concept*
 
 # 4. Python bytecode, environments, and test caches:
 __pycache__/
@@ -49,6 +66,10 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+build/
+dist/*
+!dist/installer/
+!dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe
 .venv/
 venv/
 env/

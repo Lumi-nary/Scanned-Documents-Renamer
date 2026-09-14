@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanned Documents Renamer</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="shortcut icon" href="icon.ico">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" title="Scanned Documents Renamer">
+        <img src="icon.png" alt="App Icon" class="brand-icon-img">
+      </div>
+      <div>
+        <div class="brand-title">
+          <span>Scanned Documents Renamer</span>
+          <span class="brand-badge">AI Vision Ingestion</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Status Pill -->
+      <div id="status-pill" class="status-pill">
+        <span class="status-indicator-dot"></span>
+        <span id="status-text">Stopped</span>
+      </div>
+
+      <!-- Wrapup Batch Button -->
+      <button id="btn-wrapup" class="btn btn-secondary btn-sm" title="Consolidate unprocessed files into client folders and update Clients.docx">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Wrap Up Batch</span>
+      </button>
+
+      <!-- Start / Stop Toggle -->
+      <button id="btn-toggle-daemon" class="btn btn-primary" title="Start or pause automated file monitoring">
+        <svg id="icon-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span id="btn-toggle-text">Start Ingestion</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- App Body -->
+  <main class="app-body">
+
+    <!-- Metric Counters Bar -->
+    <section class="stats-container" aria-label="System Metrics">
+      <!-- Card 1: Monitoring Status -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper stat-icon-cyan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Ingestion Daemon</div>
+          <div id="metric-daemon-state" class="stat-value">Standby</div>
+        </div>
+      </div>
+
+      <!-- Card 2: Queued Files -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper stat-icon-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Queued Files</div>
+          <div id="metric-queue-count" class="stat-value">0</div>
+        </div>
+      </div>
+
+      <!-- Card 3: Processed Documents -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper stat-icon-emerald">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Filed Documents</div>
+          <div id="metric-processed-count" class="stat-value">0</div>
+        </div>
+      </div>
+
+      <!-- Card 4: Active Client Sticky Context -->
+      <div class="stat-card">
+        <div class="stat-icon-wrapper stat-icon-indigo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Active Client Context</div>
+          <div id="metric-active-client" class="stat-value" title="Context carried across unscoped batch scans">None</div>
+        </div>
+        <button id="btn-clear-client" class="btn btn-secondary btn-sm" title="Reset active client context" style="display:none;">Clear</button>
+      </div>
+    </section>
+
+    <!-- Tabs & Workspace Section -->
+    <div class="workspace-wrapper">
+      <nav class="tab-nav" aria-label="Navigation Tabs">
+        <button class="tab-button active" data-tab="feed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Live Ingestion Feed</span>
+        </button>
+
+        <button class="tab-button" data-tab="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Folders & Settings</span>
+        </button>
+
+        <button class="tab-button" data-tab="logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>System Logs</span>
+        </button>
+
+        <button class="tab-button" data-tab="guide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Quick Guide</span>
+        </button>
+      </nav>
+
+      <!-- Panel 1: Live Ingestion Feed -->
+      <section id="panel-feed" class="tab-content-panel active">
+        <div class="activity-container">
+          <div class="activity-toolbar">
+            <div class="activity-title">
+              <span>Recently Ingested & Filed Documents</span>
+            </div>
+            <button id="btn-clear-feed" class="btn btn-secondary btn-sm" title="Clear activity list">Clear View</button>
+          </div>
+
+          <div id="activity-feed-list" class="activity-feed-scroll">
+            <div id="feed-empty-state" class="activity-empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <div class="activity-empty-title">Waiting for Scanned Documents</div>
+              <p class="activity-empty-desc">
+                When your scanner outputs PDFs into the monitored folder, they will be read by AI, renamed, and organized into client directories automatically.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 2: Folders & Settings -->
+      <section id="panel-settings" class="tab-content-panel">
+        <div class="settings-card">
+          <form id="settings-form" onsubmit="return false;">
+            
+            <!-- Watched Directory -->
+            <div class="form-group">
+              <label class="form-label" for="setting-watch-dir">Scanner Output Folder (Watched Directory)</label>
+              <div class="input-with-button">
+                <input type="text" id="setting-watch-dir" class="form-input" placeholder="e.g. C:\Scans\Temporary\Unprocessed" required>
+                <button type="button" id="btn-browse-folder" class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Browse...</span>
+                </button>
+              </div>
+              <div class="form-hint">Choose the folder where your scanner saves newly scanned files.</div>
+            </div>
+
+            <!-- Provider & Mock Option -->
+            <div class="form-row-grid">
+              <div class="form-group">
+                <label class="form-label" for="setting-provider">AI Provider</label>
+                <select id="setting-provider" class="form-select">
+                  <option value="openrouter">OpenRouter (Gemini, Claude, DeepSeek, Free models)</option>
+                  <option value="deepseek">DeepSeek Direct (DeepSeek-V3 / Chat)</option>
+                  <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
+                  <option value="groq">Groq (Ultra-fast Llama-3.1)</option>
+                  <option value="mock">Mock Offline Mode (No API key needed / Testing)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="setting-model">Model Name</label>
+                <input type="text" id="setting-model" class="form-input" placeholder="e.g. google/gemini-2.5-flash:free">
+                <div class="form-hint">Recommended for OpenRouter: <code>google/gemini-2.5-flash:free</code></div>
+              </div>
+            </div>
+
+            <!-- API Key -->
+            <div class="form-group">
+              <label class="form-label" for="setting-api-key">API Key</label>
+              <div class="input-with-button">
+                <input type="password" id="setting-api-key" class="form-input" placeholder="Enter your provider API key">
+                <button type="button" id="btn-toggle-key-visibility" class="btn btn-secondary btn-sm" title="Show or hide API key">Show</button>
+              </div>
+              <div class="form-hint">Stored safely in local <code>settings.json</code>. Never sent anywhere except directly to your chosen provider.</div>
+            </div>
+
+            <!-- Workers & Timeout -->
+            <div class="form-row-grid">
+              <div class="form-group">
+                <label class="form-label" for="setting-workers">Worker Threads</label>
+                <input type="number" id="setting-workers" class="form-input" min="1" max="8" value="2">
+                <div class="form-hint">Number of files processed simultaneously.</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="setting-stability">File Stability Timeout (seconds)</label>
+                <input type="number" id="setting-stability" class="form-input" min="2" max="120" value="30">
+                <div class="form-hint">Waits for the scanner to finish saving multi-page scans.</div>
+              </div>
+            </div>
+
+            <!-- Checkboxes -->
+            <div class="form-group">
+              <label class="checkbox-group">
+                <input type="checkbox" id="setting-wrapup">
+                <span>Automatically group and file documents into client subdirectories on batch wrap-up</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-group">
+                <input type="checkbox" id="setting-docx">
+                <span>Update master <code>Clients.docx</code> ledger with client names and date ranges</span>
+              </label>
+            </div>
+
+            <!-- Save Action -->
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+              <button type="button" id="btn-save-settings" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Save Settings</span>
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+      <!-- Panel 3: Live System Logs -->
+      <section id="panel-logs" class="tab-content-panel">
+        <div class="terminal-container">
+          <div class="terminal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Live Diagnostics Stream</span>
+              <label class="checkbox-group" style="font-size: 12px; color: var(--text-muted);">
+                <input type="checkbox" id="chk-autoscroll" checked>
+                <span>Auto-scroll</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-clear-logs" class="btn btn-secondary btn-sm">Clear Terminal</button>
+            </div>
+          </div>
+          <div id="terminal-output" class="terminal-scroll">
+            <div class="log-entry">
+              <span class="log-time">--:--:--</span>
+              <span class="log-badge INFO">[READY]</span>
+              <span class="log-msg">Scanned Documents Renamer initialized. Ready to start ingestion.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Panel 4: Quick Guide -->
+      <section id="panel-guide" class="tab-content-panel">
+        <div class="settings-card" style="line-height: 1.7;">
+          <h2 style="font-size: 18px; margin-bottom: 12px; color: var(--text-primary);">How Scanned Documents Renamer Works</h2>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0;">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+              <div style="font-size: 14px; font-weight: 700; color: #38bdf8; margin-bottom: 6px;">1. Scan Documents</div>
+              <p style="font-size: 13px; color: var(--text-secondary);">
+                Scan your paperwork into your scanner's designated output folder (e.g. <code>Temporary/Unprocessed</code>).
+              </p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+              <div style="font-size: 14px; font-weight: 700; color: #a78bfa; margin-bottom: 6px;">2. AI Vision Inspection</div>
+              <p style="font-size: 13px; color: var(--text-secondary);">
+                The app detects when the scanner finishes writing, reads headers, document numbers, dates, and client identities.
+              </p>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 16px;">
+              <div style="font-size: 14px; font-weight: 700; color: #34d399; margin-bottom: 6px;">3. Automatic Filing</div>
+              <p style="font-size: 13px; color: var(--text-secondary);">
+                The file is renamed with a clean, standardized filename and moved automatically into the client's folder.
+              </p>
+            </div>
+          </div>
+
+          <h3 style="font-size: 15px; margin-top: 16px; color: var(--text-primary);">Supported Document Types</h3>
+          <ul style="margin-left: 20px; font-size: 13.5px; color: var(--text-secondary); margin-top: 8px;">
+            <li><strong>Statement of Account (SOA / OPE):</strong> Renamed strictly to reference digits (e.g. <code>13656.pdf</code>, <code>20220129.pdf</code>).</li>
+            <li><strong>Secretary's Certificates & Corporate Documents:</strong> Extracts notarial Doc. No. (e.g. <code>Secretary's Certificate Doc. No. 384.pdf</code>).</li>
+            <li><strong>Certificates of Incorporation & Registration:</strong> Reads SEC Reg. No. or BIR OCN.</li>
+            <li><strong>Transmittal Sheets:</strong> Formatted with date (e.g. <code>Transmittal Sheet 01_08_2024.pdf</code>).</li>
+            <li><strong>Summary of Services Rendered:</strong> Formatted with service period (e.g. <code>Summary of Services May to August 2018.pdf</code>).</li>
+          </ul>
+
+          <div style="margin-top: 24px; padding: 14px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: var(--radius-md); font-size: 13px; color: #c7d2fe;">
+            <strong>Tip for Office Staff:</strong> When scanning a stack of papers for a specific client that includes generic receipts, you can set the <em>Active Client Context</em> so all subsequent pages are automatically filed under that client until you click <em>Clear</em>.
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -392,7 +392,8 @@ def worker_loop(
     config: PipelineConfig,
     output_dir: Optional[str] = None,
     processed_records: Optional[List[Dict[str, Any]]] = None,
-    client_mgr: Optional[Any] = None
+    client_mgr: Optional[Any] = None,
+    event_callback: Optional[Any] = None
 ) -> None:
     """
     Asynchronous worker thread that dequeues file targets from the reactive watchdog queue,
@@ -415,6 +416,17 @@ def worker_loop(
                 logger.warning(f"[{thread_name}] File does not exist: {file_path}. Skipping.")
                 continue
 
+            if event_callback:
+                try:
+                    event_callback({
+                        "type": "stabilizing",
+                        "file_path": file_path,
+                        "filename": os.path.basename(file_path),
+                        "timestamp": time.strftime("%H:%M:%S")
+                    })
+                except Exception:
+                    pass
+
             # Step 1: Stability verification (wait for file write to complete)
             wait_for_file_stability(
                 file_path=file_path,
@@ -425,6 +437,17 @@ def worker_loop(
             if not os.path.exists(file_path):
                 logger.warning(f"[{thread_name}] File no longer exists after stability check: {file_path}. Skipping.")
                 continue
+
+            if event_callback:
+                try:
+                    event_callback({
+                        "type": "analyzing",
+                        "file_path": file_path,
+                        "filename": os.path.basename(file_path),
+                        "timestamp": time.strftime("%H:%M:%S")
+                    })
+                except Exception:
+                    pass
 
             # Step 2: Read payload & Invoke AI API Dispatcher using Vision AI OCR
             ai_target_name = None
@@ -544,6 +567,21 @@ def worker_loop(
                         "client_name": client_name,
                         "doc_date": extracted_doc_date
                     })
+
+                if event_callback:
+                    try:
+                        event_callback({
+                            "type": "completed",
+                            "src_path": file_path,
+                            "src_filename": file_name,
+                            "dest_path": dest_path,
+                            "dest_filename": os.path.basename(dest_path),
+                            "client_name": client_name or "General Clients",
+                            "doc_date": extracted_doc_date or "",
+                            "timestamp": time.strftime("%H:%M:%S")
+                        })
+                    except Exception:
+                        pass
             else:
                 current_dir = os.path.dirname(os.path.abspath(file_path))
                 parent_dir_name = os.path.basename(current_dir).lower()
@@ -577,10 +615,47 @@ def worker_loop(
                         "doc_date": extracted_doc_date
                     })
 
+                if event_callback:
+                    try:
+                        event_callback({
+                            "type": "completed",
+                            "src_path": file_path,
+                            "src_filename": file_name,
+                            "dest_path": dest_path,
+                            "dest_filename": target_name,
+                            "client_name": extracted_client_name or "General Clients",
+                            "doc_date": extracted_doc_date or "",
+                            "timestamp": time.strftime("%H:%M:%S")
+                        })
+                    except Exception:
+                        pass
+
         except FileStabilityError as fse:
             logger.error(f"[{thread_name}] Stability error for {file_path}: {fse}")
+            if event_callback:
+                try:
+                    event_callback({
+                        "type": "error",
+                        "file_path": file_path,
+                        "filename": os.path.basename(file_path),
+                        "error": str(fse),
+                        "timestamp": time.strftime("%H:%M:%S")
+                    })
+                except Exception:
+                    pass
         except Exception as ex:
             logger.error(f"[{thread_name}] Error processing {file_path}: {ex}", exc_info=True)
+            if event_callback:
+                try:
+                    event_callback({
+                        "type": "error",
+                        "file_path": file_path,
+                        "filename": os.path.basename(file_path),
+                        "error": str(ex),
+                        "timestamp": time.strftime("%H:%M:%S")
+                    })
+                except Exception:
+                    pass
         finally:
             work_queue.task_done()
 
