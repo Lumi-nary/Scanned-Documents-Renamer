@@ -11,8 +11,8 @@ from typing import Optional, List, Dict, Any
 from src.config import PipelineConfig
 from src.stability import wait_for_file_stability, FileStabilityError
 from src.dispatcher import AIAPIDispatcher
-from src.organizer import classify_pdf_by_rules, resolve_filename_collision
-from src.client_manager import format_client_name
+from src.organizer import classify_pdf_by_rules, resolve_filename_collision, extract_date_from_text
+from src.client_manager import format_client_name, extract_client_name_from_pdf, INVALID_CLIENT_PHRASES
 
 logger = logging.getLogger(__name__)
 
@@ -449,93 +449,134 @@ def worker_loop(
                 except Exception:
                     pass
 
-            # Step 2: Read payload & Invoke AI API Dispatcher using Vision AI OCR
+            # Step 2: Read payload & Extract Metadata (Native Mode or AI Provider)
             ai_target_name = None
             extracted_client_name = None
             extracted_doc_date = None
+            pdf_p1_text = ""
+            pdf_full_text = ""
 
-            try:
-                response = None
+            if file_path.lower().endswith('.pdf'):
+                try:
+                    from src.ocr_engine import extract_pdf_pages_text
+                    pdf_p1_text, pdf_full_text = extract_pdf_pages_text(file_path)
+                except Exception as e:
+                    logger.debug(f"Error reading PDF text: {e}")
+
+            if getattr(config, 'provider', 'native') == "native":
+                logger.info(f"[{thread_name}] Processing in Native Mode (100% Offline / Local PP-OCR). Note: Native OCR may have inaccuracies on degraded scans; an AI API is recommended for highest precision.")
                 if file_path.lower().endswith('.pdf'):
-                    b64_imgs = pdf_to_base64_images(file_path)
-                    if b64_imgs:
-                        logger.info(f"[{thread_name}] Dispatching {len(b64_imgs)} visual document page(s) to AI Vision OCR model ({config.model_name})...")
-                        
-                        # Read page 1 text excerpt to ground the vision AI model in ground-truth text
-                        p1_excerpt = ""
+                    known = client_mgr.get_client_directories() if client_mgr else None
+                    ai_target_name = classify_pdf_by_rules(file_path, text_p1=pdf_p1_text, text_full=pdf_full_text)
+                    extracted_client_name = extract_client_name_from_pdf(
+                        file_path, text_p1=pdf_p1_text, text_full=pdf_full_text, known_clients=known
+                    )
+                    extracted_doc_date = (
+                        extract_date_from_text(pdf_p1_text)
+                        or extract_date_from_text(pdf_full_text)
+                        or extract_date_from_text(os.path.basename(file_path))
+                    )
+
+                    # Second-pass fallback: If initial classification or client matching resulted in Unrecognized or General Clients,
+                    # force local PP-OCR to ensure high-accuracy offline extraction
+                    if (not ai_target_name or ai_target_name.lower().startswith("unrecognized") or extracted_client_name == "General Clients"):
                         try:
-                            import fitz
-                            with fitz.open(file_path) as d:
-                                if len(d) > 0:
-                                    p1_excerpt = d[0].get_text()[:1500].strip()
-                        except Exception:
-                            pass
+                            from src.ocr_engine import extract_pdf_pages_text
+                            ocr_p1, ocr_full = extract_pdf_pages_text(file_path, force_ocr=True)
+                            if ocr_p1 and ocr_p1.strip():
+                                ocr_target = classify_pdf_by_rules(file_path, text_p1=ocr_p1, text_full=ocr_full)
+                                if ocr_target and not ocr_target.lower().startswith("unrecognized"):
+                                    ai_target_name = ocr_target
+                                    pdf_p1_text = ocr_p1
+                                    pdf_full_text = ocr_full
+                                ocr_client = extract_client_name_from_pdf(
+                                    file_path, text_p1=ocr_p1, text_full=ocr_full, known_clients=known
+                                )
+                                if ocr_client and ocr_client != "General Clients":
+                                    extracted_client_name = ocr_client
+                                    pdf_p1_text = ocr_p1
+                                    pdf_full_text = ocr_full
+                                if not extracted_doc_date:
+                                    extracted_doc_date = extract_date_from_text(ocr_p1) or extract_date_from_text(ocr_full)
+                        except Exception as ocr_err:
+                            logger.debug(f"PP-OCR second-pass fallback error: {ocr_err}")
 
-                        prompt_text = "Perform visual AI OCR on this document image (including first and last/signature pages and zoomed notary crop). Read all dates, numbers, headers, Doc. No., and client names visually and return the metadata JSON."
-                        if p1_excerpt:
-                            prompt_text = f"Document text excerpt from Page 1:\n---\n{p1_excerpt}\n---\n\n{prompt_text}"
+                    logger.info(f"[{thread_name}] Native Engine classified target: '{ai_target_name}' (Client: '{extracted_client_name}')")
+            else:
+                # Technical User Mode: Local LLM (Ollama / LM Studio) or Cloud API
+                try:
+                    response = None
+                    if file_path.lower().endswith('.pdf'):
+                        b64_imgs = pdf_to_base64_images(file_path)
+                        if b64_imgs:
+                            logger.info(f"[{thread_name}] Dispatching {len(b64_imgs)} visual document page(s) to AI Model ({config.model_name})...")
+                            
+                            p1_excerpt = pdf_p1_text[:1500].strip() if pdf_p1_text else ""
+                            prompt_text = "Perform visual AI OCR on this document image (including first and last/signature pages and zoomed notary crop). Read all dates, numbers, headers, Doc. No., and client names visually and return the metadata JSON."
+                            if p1_excerpt:
+                                prompt_text = f"Document text excerpt from Page 1:\n---\n{p1_excerpt}\n---\n\n{prompt_text}"
 
-                        response = api_dispatcher.dispatch_vision(
-                            image_b64_url=b64_imgs,
-                            system_prompt=CLASSIFICATION_SYSTEM_PROMPT,
-                            text_prompt=prompt_text
-                        )
+                            response = api_dispatcher.dispatch_vision(
+                                image_b64_url=b64_imgs,
+                                system_prompt=CLASSIFICATION_SYSTEM_PROMPT,
+                                text_prompt=prompt_text
+                            )
 
-                if not response:
-                    # Text fallback for non-PDF or image rendering fallback
-                    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                        content = f.read()
-                    if content.strip():
-                        response = api_dispatcher.dispatch_prompt(
-                            prompt_text=content[:config.max_payload_length],
-                            system_prompt=CLASSIFICATION_SYSTEM_PROMPT
-                        )
+                    if not response:
+                        # Text prompt fallback (for text-only local models or non-PDF files)
+                        content = pdf_full_text if pdf_full_text else ""
+                        if not content and os.path.exists(file_path):
+                            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                                content = f.read()
+                        if content.strip():
+                            response = api_dispatcher.dispatch_prompt(
+                                prompt_text=content[:config.max_payload_length],
+                                system_prompt=CLASSIFICATION_SYSTEM_PROMPT
+                            )
 
-                if response:
-                    metadata = parse_ai_suggested_metadata(response)
-                    ai_target_name = metadata.get("filename")
-                    extracted_client_name = metadata.get("client_name")
-                    extracted_doc_date = metadata.get("doc_date")
+                    if response:
+                        metadata = parse_ai_suggested_metadata(response)
+                        ai_target_name = metadata.get("filename")
+                        extracted_client_name = metadata.get("client_name")
+                        extracted_doc_date = metadata.get("doc_date")
 
-                    if ai_target_name:
-                        logger.info(f"[{thread_name}] AI Vision OCR classified target filename: '{ai_target_name}'")
+                        if ai_target_name:
+                            logger.info(f"[{thread_name}] AI classified target filename: '{ai_target_name}'")
 
-                    if output_dir:
-                        os.makedirs(output_dir, exist_ok=True)
-                        out_filename = f"{os.path.basename(file_path)}.response.txt"
-                        out_path = os.path.join(output_dir, out_filename)
-                        with open(out_path, 'w', encoding='utf-8') as out_f:
-                            out_f.write(response)
-                        logger.info(f"[{thread_name}] Saved AI response to: {out_path}")
-            except Exception as e:
-                logger.error(f"[{thread_name}] Error processing document with AI Vision OCR: {e}", exc_info=True)
+                        if output_dir:
+                            os.makedirs(output_dir, exist_ok=True)
+                            out_filename = f"{os.path.basename(file_path)}.response.txt"
+                            out_path = os.path.join(output_dir, out_filename)
+                            with open(out_path, 'w', encoding='utf-8') as out_f:
+                                out_f.write(response)
+                            logger.info(f"[{thread_name}] Saved AI response to: {out_path}")
+                except Exception as e:
+                    logger.error(f"[{thread_name}] Error processing document with AI model: {e}", exc_info=True)
 
             # Step 3: Direct routing to Client directory with sticky client context
             file_name = os.path.basename(file_path)
 
-            if ai_target_name:
+            if ai_target_name and not ai_target_name.lower().startswith("unrecognized"):
                 target_name = ai_target_name
             elif file_name.lower().endswith('.pdf'):
-                target_name = classify_pdf_by_rules(file_path)
+                rule_name = classify_pdf_by_rules(file_path, text_p1=pdf_p1_text, text_full=pdf_full_text)
+                if rule_name and not rule_name.lower().startswith("unrecognized"):
+                    target_name = rule_name
+                else:
+                    target_name = file_name
             else:
                 target_name = file_name
 
             # Authoritative client extraction & validation from PDF ground-truth text layer
             if file_path.lower().endswith('.pdf'):
-                from src.client_manager import extract_client_name_from_pdf, INVALID_CLIENT_PHRASES
-                rule_client = extract_client_name_from_pdf(file_path)
+                known = client_mgr.get_client_directories() if client_mgr else None
+                rule_client = extract_client_name_from_pdf(
+                    file_path, text_p1=pdf_p1_text, text_full=pdf_full_text, known_clients=known
+                )
                 if rule_client and rule_client.lower() != "general clients" and not any(k in rule_client.lower() for k in INVALID_CLIENT_PHRASES):
                     is_bank = any(b in (extracted_client_name or '').lower() for b in ['bank', 'unibank', 'bdo unibank', 'bdo leasing'])
                     
-                    # Verify if AI suggested client actually exists in document text
-                    pdf_txt = ""
-                    try:
-                        import fitz
-                        with fitz.open(file_path) as d:
-                            pdf_txt = '\n'.join([p.get_text() for p in d[:3]]).lower()
-                    except Exception:
-                        pass
-
+                    pdf_txt = (pdf_full_text or '').lower()
                     ai_client_str = (extracted_client_name or '').lower()
                     ai_words = [w for w in re.sub(r'[^a-z0-9\s]', ' ', ai_client_str).split() if len(w) > 3]
                     ai_not_in_doc = bool(extracted_client_name and ai_words and not any(w in pdf_txt for w in ai_words))
@@ -544,6 +585,13 @@ def worker_loop(
                     if not extracted_client_name or is_bank or ai_not_in_doc or ai_is_invalid_phrase or (rule_client.lower() in pdf_txt and ai_client_str != rule_client.lower()):
                         logger.info(f"[{thread_name}] Setting client to verified issuing entity from PDF text: '{rule_client}' (AI suggested: '{extracted_client_name}')")
                         extracted_client_name = rule_client
+
+            if not extracted_doc_date and file_path.lower().endswith('.pdf'):
+                extracted_doc_date = (
+                    extract_date_from_text(pdf_p1_text)
+                    or extract_date_from_text(pdf_full_text)
+                    or extract_date_from_text(file_name)
+                )
 
             if client_mgr is not None:
                 client_name, is_inherited = client_mgr.resolve_client_name(extracted_client_name)
@@ -564,6 +612,8 @@ def worker_loop(
                     processed_records.append({
                         "file_path": dest_path,
                         "filename": os.path.basename(dest_path),
+                        "dest_path": dest_path,
+                        "dest_filename": os.path.basename(dest_path),
                         "client_name": client_name,
                         "doc_date": extracted_doc_date
                     })
@@ -611,6 +661,8 @@ def worker_loop(
                     processed_records.append({
                         "file_path": dest_path,
                         "filename": target_name,
+                        "dest_path": dest_path,
+                        "dest_filename": target_name,
                         "client_name": extracted_client_name,
                         "doc_date": extracted_doc_date
                     })

@@ -299,7 +299,163 @@ I, MARIA SANTOS, of legal age, with address at 123 Corporate Center, Business Di
         self.assertEqual(extracted6, "Acme Management Corp")
         self.assertNotEqual(extracted6, "Receive For And On Behalf Of The Corporation")
 
+    def test_get_client_directories(self):
+        manager = ClientManager(self.watch_dir)
+        # Create dummy client directories in root_dir
+        os.makedirs(os.path.join(manager.root_dir, "Alpha Corp"), exist_ok=True)
+        os.makedirs(os.path.join(manager.root_dir, "Alpha Corp", "Nested Subfolder"), exist_ok=True)
+        os.makedirs(os.path.join(manager.root_dir, "Beta LLC"), exist_ok=True)
+        os.makedirs(os.path.join(manager.root_dir, "Litigation", "Sub Litigant"), exist_ok=True)
+        os.makedirs(os.path.join(manager.root_dir, "output"), exist_ok=True)  # Should be ignored
+
+        clients = manager.get_client_directories()
+        self.assertIn("Alpha Corp", clients)
+        self.assertIn("Beta LLC", clients)
+        self.assertIn("SUB Litigant", clients)
+        self.assertIn("General Clients", clients)
+        self.assertNotIn("Nested Subfolder", clients)
+        self.assertNotIn("output", clients)
+        self.assertNotIn("Temporary", clients)
+
+    def test_active_client_lock_prevents_override(self):
+        manager = ClientManager(self.watch_dir)
+        # 1. Unlocked dynamic behavior
+        client, inherited = manager.resolve_client_name("Acme Management Corp")
+        self.assertEqual(client, "Acme Management Corp")
+        self.assertFalse(inherited)
+        self.assertEqual(manager.get_active_client(), "Acme Management Corp")
+        self.assertFalse(manager.is_locked())
+
+        # 2. Lock active client to Acme Management Corp
+        manager.lock_active_client("Acme Management Corp")
+        self.assertTrue(manager.is_locked())
+        self.assertEqual(manager.get_active_client(), "Acme Management Corp")
+
+        # 3. New scan detects a different client ("Global Group Corporation")
+        # Because context is LOCKED, it must unconditionally return the locked client
+        locked_client, is_inh = manager.resolve_client_name("Global Group Corporation")
+        self.assertEqual(locked_client, "Acme Management Corp")
+        self.assertTrue(is_inh)
+        self.assertEqual(manager.get_active_client(), "Acme Management Corp")
+
+        # 4. Unscoped scan with no client also inherits locked client
+        locked_client2, is_inh2 = manager.resolve_client_name(None)
+        self.assertEqual(locked_client2, "Acme Management Corp")
+        self.assertTrue(is_inh2)
+
+    def test_active_client_unlock_resumes_dynamic_resolution(self):
+        manager = ClientManager(self.watch_dir)
+        manager.lock_active_client("Acme Management Corp")
+        self.assertTrue(manager.is_locked())
+
+        # Unlock
+        manager.unlock_active_client()
+        self.assertFalse(manager.is_locked())
+
+        # Dynamic resolution resumes: new detected client overrides active client
+        client, inherited = manager.resolve_client_name("Global Group Corporation")
+        self.assertEqual(client, "Global Group Corporation")
+        self.assertFalse(inherited)
+        self.assertEqual(manager.get_active_client(), "Global Group Corporation")
+
+    def test_custom_clients_directory_configuration(self):
+        # Create a separate, dedicated clients root directory outside the watch hierarchy
+        custom_clients_dir = os.path.join(self.test_dir, "Dedicated_Clients_Vault")
+        os.makedirs(custom_clients_dir, exist_ok=True)
+
+        manager = ClientManager(self.watch_dir, clients_dir=custom_clients_dir)
+        self.assertEqual(manager.root_dir, os.path.abspath(custom_clients_dir))
+        self.assertEqual(manager.docx_path, os.path.join(os.path.abspath(custom_clients_dir), "Clients.docx"))
+
+        # Create dummy file in watch dir
+        src_file = os.path.join(self.watch_dir, "custom_scan.pdf")
+        with open(src_file, "w", encoding="utf-8") as f:
+            f.write("Custom client scan content")
+
+        # Route to client
+        dest = manager.route_file_to_client(src_file, "Vanguard Enterprises")
+        expected_client_dir = os.path.join(custom_clients_dir, "Vanguard Enterprises")
+        self.assertTrue(os.path.isdir(expected_client_dir))
+        self.assertTrue(os.path.exists(dest))
+        self.assertTrue(dest.startswith(os.path.abspath(custom_clients_dir)))
+
+    def test_custom_clients_directory_get_client_directories(self):
+        custom_clients_dir = os.path.join(self.test_dir, "Dedicated_Clients_Vault_2")
+        os.makedirs(os.path.join(custom_clients_dir, "Client Alpha"), exist_ok=True)
+        os.makedirs(os.path.join(custom_clients_dir, "Client Beta"), exist_ok=True)
+
+        manager = ClientManager(self.watch_dir, clients_dir=custom_clients_dir)
+        clients = manager.get_client_directories()
+        self.assertIn("Client Alpha", clients)
+        self.assertIn("Client Beta", clients)
+        self.assertIn("General Clients", clients)
+
+    def test_pipeline_config_clients_directory(self):
+        from src.config import PipelineConfig
+        cfg = PipelineConfig(
+            watch_directory=self.watch_dir,
+            clients_directory=os.path.join(self.test_dir, "My_Clients")
+        )
+        d = cfg.to_dict()
+        self.assertEqual(d["clients_directory"], os.path.join(self.test_dir, "My_Clients"))
+
+        # Test loading from dict-style JSON
+        import tempfile
+        import json
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tf:
+            json.dump({
+                "watch_directories": [self.watch_dir],
+                "clients_directory": "D:\\My Clients"
+            }, tf)
+            tmp_path = tf.name
+
+        try:
+            loaded = PipelineConfig.load(tmp_path)
+            self.assertEqual(loaded.clients_directory, "D:\\My Clients")
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def test_client_manager_set_and_lock_client(self):
+        manager = ClientManager(self.watch_dir)
+        self.assertIsNone(manager.get_active_client())
+        self.assertFalse(manager.is_locked())
+
+        # Set and lock
+        manager.set_and_lock_client("Solid Platinum Holdings Corp", locked=True)
+        self.assertEqual(manager.get_active_client(), "Solid Platinum Holdings Corp")
+        self.assertTrue(manager.is_locked())
+
+        # Auto-detect / None reset
+        manager.set_and_lock_client("None (Auto-detect)", locked=False)
+        self.assertIsNone(manager.get_active_client())
+        self.assertFalse(manager.is_locked())
+
+    def test_pipeline_daemon_set_and_lock_atomic(self):
+        from src.pipeline_daemon import PipelineDaemon
+        from src.config import PipelineConfig
+
+        cfg = PipelineConfig(watch_directory=self.watch_dir)
+        daemon = PipelineDaemon(config=cfg)
+
+        status_events = []
+        daemon.add_listener(lambda e: status_events.append(e) if e.get("category") == "status" else None)
+
+        daemon.set_and_lock_client("Jesus Jayme JR", locked=True)
+        self.assertEqual(daemon.get_active_client(), "Jesus Jayme Jr.")
+        self.assertTrue(daemon.is_client_locked())
+
+        status = daemon.get_status()
+        self.assertEqual(status["active_client"], "Jesus Jayme Jr.")
+        self.assertTrue(status["is_client_locked"])
+
+        # Reset
+        daemon.reset_active_client()
+        self.assertIsNone(daemon.get_active_client())
+        self.assertFalse(daemon.is_client_locked())
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

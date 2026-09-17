@@ -85,11 +85,10 @@ def main():
         builder = BatchManifestBuilder(model_name=config.model_name)
         for watch_dir in config.watch_directories:
             if os.path.exists(watch_dir):
-                for root, dirs, files in os.walk(watch_dir):
-                    for fname in files:
-                        fpath = os.path.join(root, fname)
-                        if fname.endswith(config.allowed_extensions):
-                            builder.add_file(fpath)
+                for fname in os.listdir(watch_dir):
+                    fpath = os.path.join(watch_dir, fname)
+                    if os.path.isfile(fpath) and fname.endswith(config.allowed_extensions):
+                        builder.add_file(fpath)
         builder.export_jsonl(args.batch_export)
         return
 
@@ -135,18 +134,20 @@ def main():
     )
     watch_manager = DynamicWatchManager(event_handler=handler)
 
-    monitored_paths = watch_manager.set_watch_directories(config.watch_directories, recursive=True)
+    monitored_paths = watch_manager.set_watch_directories(config.watch_directories, recursive=False)
     watch_manager.start()
 
-    # Enqueue pre-existing files in monitored directories on startup
+    # Enqueue pre-existing files in monitored directories on startup (current folder only)
     for watch_target in config.watch_directories:
         if os.path.exists(watch_target):
-            for root, _, files in os.walk(watch_target):
-                for fname in files:
-                    fpath = os.path.join(root, fname)
-                    if handler._should_process(fpath):
+            try:
+                for fname in os.listdir(watch_target):
+                    fpath = os.path.join(watch_target, fname)
+                    if os.path.isfile(fpath) and handler._should_process(fpath):
                         logger.info(f"Enqueuing pre-existing file on startup: {fpath}")
                         work_queue.put(fpath)
+            except Exception as e:
+                logger.error(f"Error reading watch directory '{watch_target}': {e}")
 
     logger.info(f"Starting background worker pool ({config.num_workers} threads)...")
     worker_threads: List[threading.Thread] = []

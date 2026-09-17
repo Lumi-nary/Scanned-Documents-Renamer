@@ -24,6 +24,8 @@ EXCLUDES = [
     'curses'
 ]
 
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
 HIDDEN_IMPORTS = [
     'webview',
     'webview.platforms.winforms',
@@ -39,13 +41,18 @@ HIDDEN_IMPORTS = [
     'requests',
     'urllib3',
     'certifi',
-    'charset_normalizer'
-]
+    'charset_normalizer',
+    'cv2',
+    'PIL',
+    'onnxruntime',
+    'pyclipper',
+    'shapely'
+] + collect_submodules('rapidocr_onnxruntime')
 
 DATA_FILES = [
     ('gui', 'gui'),
     ('settings.example.json', '.')
-]
+] + collect_data_files('rapidocr_onnxruntime') + collect_data_files('onnxruntime')
 
 a = Analysis(
     ['app.py'],

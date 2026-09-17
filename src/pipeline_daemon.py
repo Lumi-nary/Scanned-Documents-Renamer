@@ -54,7 +54,14 @@ class PipelineDaemon:
         self.watch_manager: Optional[DynamicWatchManager] = None
         self.handler: Optional[AsyncIngestionHandler] = None
         self.dispatcher: Optional[AIAPIDispatcher] = None
-        self.client_mgr: Optional[ClientManager] = None
+        
+        # Initialize Client Manager immediately so client selection works before daemon start
+        base_watch = self.config.watch_directories[0] if self.config.watch_directories else os.getcwd()
+        self.client_mgr: ClientManager = ClientManager(
+            base_watch_dir=base_watch,
+            clients_dir=self.config.clients_directory,
+            update_docx=self.config.update_clients_docx
+        )
         
         self._listeners: List[Callable[[Dict[str, Any]], None]] = []
         self._lock = threading.Lock()
@@ -86,22 +93,51 @@ class PipelineDaemon:
             except Exception as e:
                 logger.debug(f"Error in event listener: {e}")
 
+    def _ensure_client_mgr(self) -> ClientManager:
+        if self.client_mgr is None:
+            base_watch = self.config.watch_directories[0] if self.config.watch_directories else os.getcwd()
+            self.client_mgr = ClientManager(
+                base_watch_dir=base_watch,
+                clients_dir=self.config.clients_directory,
+                update_docx=self.config.update_clients_docx
+            )
+        return self.client_mgr
+
     def get_active_client(self) -> Optional[str]:
-        if self.client_mgr:
-            return self.client_mgr.get_active_client()
-        return None
+        return self._ensure_client_mgr().get_active_client()
 
     def set_active_client(self, client_name: str) -> None:
-        if self.client_mgr:
-            self.client_mgr.set_active_client(client_name)
-            logger.info(f"Set active client context to: '{client_name}'")
-            self.emit_status()
+        self._ensure_client_mgr().set_active_client(client_name)
+        logger.info(f"Set active client context to: '{client_name}'")
+        self.emit_status()
+
+    def is_client_locked(self) -> bool:
+        return self._ensure_client_mgr().is_locked()
+
+    def set_client_locked(self, locked: bool) -> None:
+        self._ensure_client_mgr().set_client_locked(locked)
+        logger.info(f"Set active client lock state to: {locked}")
+        self.emit_status()
+
+    def set_and_lock_client(self, client_name: Optional[str], locked: bool = True) -> None:
+        self._ensure_client_mgr().set_and_lock_client(client_name, locked)
+        logger.info(f"Set and locked active client to: '{self.get_active_client()}' (locked={locked})")
+        self.emit_status()
+
+    def lock_active_client(self, client_name: Optional[str] = None) -> None:
+        self._ensure_client_mgr().lock_active_client(client_name)
+        logger.info(f"Locked active client to: '{self.get_active_client()}'")
+        self.emit_status()
+
+    def unlock_active_client(self) -> None:
+        self._ensure_client_mgr().unlock_active_client()
+        logger.info("Unlocked active client context.")
+        self.emit_status()
 
     def reset_active_client(self) -> None:
-        if self.client_mgr:
-            self.client_mgr.reset_active_client()
-            logger.info("Reset active client context to None.")
-            self.emit_status()
+        self._ensure_client_mgr().reset_active_client()
+        logger.info("Reset active client context to None (unlocked).")
+        self.emit_status()
 
     def get_status(self) -> Dict[str, Any]:
         return {
@@ -110,7 +146,9 @@ class PipelineDaemon:
             "queued_count": self.work_queue.qsize() if self.work_queue else 0,
             "processed_count": len(self.processed_records),
             "active_client": self.get_active_client(),
+            "is_client_locked": self.is_client_locked(),
             "watch_directories": self.config.watch_directories,
+            "clients_directory": self.config.clients_directory,
             "provider": self.config.provider,
             "model_name": self.config.model_name,
             "enable_wrapup": self.config.enable_wrapup
@@ -122,6 +160,35 @@ class PipelineDaemon:
     def get_recent_records(self, limit: int = 50) -> List[Dict[str, Any]]:
         with self._lock:
             return list(reversed(self.processed_records[-limit:]))
+
+    def get_client_directories(self, custom_root: Optional[str] = None) -> List[str]:
+        if self.client_mgr:
+            return self.client_mgr.get_client_directories(custom_root=custom_root)
+        base_watch = self.config.watch_directories[0] if self.config.watch_directories else os.getcwd()
+        from src.client_manager import ClientManager
+        cm = ClientManager(base_watch_dir=base_watch, clients_dir=self.config.clients_directory)
+        return cm.get_client_directories(custom_root=custom_root)
+
+    def update_record_file(self, old_path: str, new_path: str, new_filename: str) -> None:
+        norm_old = os.path.normpath(os.path.abspath(old_path))
+        with self._lock:
+            for r in self.processed_records:
+                r_dest = os.path.normpath(os.path.abspath(r.get("dest_path") or r.get("file_path") or ""))
+                if r_dest == norm_old:
+                    r["dest_path"] = new_path
+                    r["file_path"] = new_path
+                    r["dest_filename"] = new_filename
+                    r["filename"] = new_filename
+
+    def update_record_client(self, old_path: str, new_path: str, new_client: str) -> None:
+        norm_old = os.path.normpath(os.path.abspath(old_path))
+        with self._lock:
+            for r in self.processed_records:
+                r_dest = os.path.normpath(os.path.abspath(r.get("dest_path") or r.get("file_path") or ""))
+                if r_dest == norm_old:
+                    r["dest_path"] = new_path
+                    r["file_path"] = new_path
+                    r["client_name"] = new_client
 
     def _on_worker_event(self, event: Dict[str, Any]) -> None:
         payload = {
@@ -169,12 +236,17 @@ class PipelineDaemon:
 
         logger.info("Starting PipelineDaemon...")
         
-        # Initialize Client Manager
+        # Preserve existing Client Manager state if already initialized
         base_watch = self.config.watch_directories[0] if self.config.watch_directories else os.getcwd()
-        self.client_mgr = ClientManager(
-            base_watch_dir=base_watch,
-            update_docx=self.config.update_clients_docx
-        )
+        if self.client_mgr is None:
+            self.client_mgr = ClientManager(
+                base_watch_dir=base_watch,
+                clients_dir=self.config.clients_directory,
+                update_docx=self.config.update_clients_docx
+            )
+        else:
+            self.client_mgr.set_base_directory(base_watch, clients_dir=self.config.clients_directory)
+            self.client_mgr.update_docx = self.config.update_clients_docx
 
         # Initialize Dispatcher
         is_mock = mock_mode or (self.config.api_key in ("your-api-key-here", "", "YOUR_OPENROUTER_API_KEY_HERE"))
@@ -204,16 +276,9 @@ class PipelineDaemon:
         self.watch_manager.set_watch_directories(self.config.watch_directories, recursive=True)
         self.watch_manager.start()
 
-        # Enqueue existing files
-        for watch_target in self.config.watch_directories:
-            if os.path.exists(watch_target):
-                for root, _, files in os.walk(watch_target):
-                    for fname in files:
-                        fpath = os.path.join(root, fname)
-                        if self.handler._should_process(fpath):
-                            logger.info(f"Enqueuing pre-existing document: {fpath}")
-                            self.work_queue.put(fpath)
-                            self._on_file_enqueued(fpath, "Existing File")
+        # Enqueue existing files (recursively scanning all watch directories and subfolders)
+        enqueued = self.scan_and_enqueue_existing(self.config.watch_directories, source_label="Existing File")
+        logger.info(f"Initial scan enqueued {len(enqueued)} pre-existing document(s).")
 
         # Launch Worker Threads
         self.worker_threads.clear()
@@ -265,13 +330,130 @@ class PipelineDaemon:
         self.emit_status()
         return True
 
-    def update_watch_directories(self, directories: List[str]) -> None:
+    def scan_and_enqueue_existing(
+        self,
+        directories: Optional[List[str]] = None,
+        source_label: str = "Existing File"
+    ) -> List[str]:
+        """
+        Recursively scans target watch directories and all nested subfolders,
+        skipping temporary files, hidden directories, build artifacts, and client destination folders,
+        and enqueues eligible document files into the work queue.
+        Returns the list of newly enqueued file paths.
+        """
+        targets = directories if directories is not None else self.config.watch_directories
+        if not targets:
+            return []
+
+        enqueued = []
+        ignored_dir_names = {
+            ".git", ".idea", ".vscode", "output", "build", "dist",
+            "__pycache__", "gui", "tests", "src", "installer"
+        }
+
+        # Resolve destination clients directory path to avoid re-scanning already organized files
+        client_dest_root = None
+        if self.config.clients_directory and os.path.exists(self.config.clients_directory):
+            client_dest_root = os.path.normcase(os.path.abspath(self.config.clients_directory))
+        elif self.client_mgr and self.client_mgr.root_dir and os.path.exists(self.client_mgr.root_dir):
+            client_dest_root = os.path.normcase(os.path.abspath(self.client_mgr.root_dir))
+
+        # Collect currently queued files to avoid re-enqueuing duplicates
+        currently_queued = set()
+        if self.work_queue:
+            with self.work_queue.mutex:
+                currently_queued = {os.path.normcase(os.path.abspath(p)) for p in self.work_queue.queue}
+
+        already_processed = set()
+        with self._lock:
+            for r in self.processed_records:
+                src_p = r.get("file_path") or ""
+                dst_p = r.get("dest_path") or ""
+                if src_p:
+                    already_processed.add(os.path.normcase(os.path.abspath(src_p)))
+                if dst_p:
+                    already_processed.add(os.path.normcase(os.path.abspath(dst_p)))
+
+        for watch_target in targets:
+            abs_target = os.path.abspath(watch_target)
+            if not os.path.exists(abs_target):
+                continue
+
+            for root, dirs, files in os.walk(abs_target):
+                # Filter out system and ignored directories in-place
+                dirs[:] = [d for d in dirs if not d.startswith('.') and d.lower() not in ignored_dir_names]
+
+                # If the watch directory encompasses the client destination root,
+                # do not descend into client folders that are already organized!
+                if client_dest_root:
+                    norm_root = os.path.normcase(os.path.abspath(root))
+                    if norm_root == client_dest_root:
+                        # Only keep staging subdirectories like Temporary, Unprocessed
+                        dirs[:] = [d for d in dirs if d.lower() in ("temporary", "temp", "unproccesed", "unprocessed")]
+
+                for fname in sorted(files):
+                    if fname.startswith(('~', '.')):
+                        continue
+                    ext = os.path.splitext(fname)[1].lower()
+                    if ext not in self.config.allowed_extensions or ext in self.config.ignored_extensions:
+                        continue
+
+                    fpath = os.path.join(root, fname)
+                    norm_fpath = os.path.normcase(os.path.abspath(fpath))
+
+                    if norm_fpath in currently_queued or norm_fpath in already_processed:
+                        continue
+
+                    # Check file eligibility
+                    should_process = True
+                    if self.handler:
+                        should_process = self.handler._should_process(fpath)
+                    else:
+                        from src.stability import is_temporary_file
+                        should_process = not is_temporary_file(fpath, self.config.ignored_extensions)
+
+                    if should_process and os.path.isfile(fpath):
+                        if self.work_queue:
+                            self.work_queue.put(fpath)
+                            currently_queued.add(norm_fpath)
+                            self._on_file_enqueued(fpath, source_label)
+                            enqueued.append(fpath)
+                            logger.info(f"Enqueued document from watch target ({source_label}): {fpath}")
+
+        return enqueued
+
+    def update_watch_directories(self, directories: List[str]) -> List[str]:
         self.config.watch_directories = directories
         if directories:
             self.config.watch_directory = directories[0]
             if self.client_mgr:
-                self.client_mgr.base_directory = directories[0]
+                self.client_mgr.set_base_directory(directories[0], clients_dir=self.config.clients_directory)
+        enqueued = []
         if self.watch_manager and self.is_running:
             self.watch_manager.set_watch_directories(directories, recursive=True)
             logger.info(f"Updated watch directories at runtime: {directories}")
+            # Scan new folders for existing files immediately upon settings update
+            enqueued = self.scan_and_enqueue_existing(directories, source_label="Settings Change Scan")
+            logger.info(f"Settings change scan enqueued {len(enqueued)} document(s).")
         self.emit_status()
+        return enqueued
+
+    def update_clients_directory(self, clients_dir: Optional[str]) -> List[str]:
+        clean_dir = os.path.abspath(clients_dir.strip()) if clients_dir and clients_dir.strip() else None
+        self.config.clients_directory = clean_dir
+        if self.client_mgr:
+            base_watch = self.config.watch_directories[0] if self.config.watch_directories else os.getcwd()
+            self.client_mgr.set_base_directory(base_watch, clients_dir=clean_dir)
+            logger.info(f"Updated clients directory at runtime: {clean_dir}")
+        self.emit_status()
+        return self.get_client_directories()
+
+    def scan_watched_folder(self) -> List[str]:
+        """
+        Manually scans all watched directories (recursively including subfolders)
+        and enqueues eligible document files.
+        """
+        enqueued = self.scan_and_enqueue_existing(self.config.watch_directories, source_label="Manual Scan")
+        logger.info(f"Manual scan enqueued {len(enqueued)} document(s).")
+        self.emit_status()
+        return enqueued

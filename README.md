@@ -63,16 +63,32 @@ Client attribution prefers the corporate-officer pattern (`"...being the duly qu
 
 ---
 
-## Providers
+## Providers & Recommended AI Models
 
-Any OpenAI-compatible endpoint. Presets in `src/config.py`:
+Any OpenAI-compatible endpoint. Built-in presets in `src/config.py`:
 
-| Preset | Base URL | Default model |
-| --- | --- | --- |
-| `openrouter` | `https://openrouter.ai/api/v1` | `google/gemini-2.5-flash:free` |
-| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat` |
-| `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` |
-| `groq` | `https://api.groq.com/openai/v1` | `llama-3.1-8b-instant` |
+| Preset | Base URL | Default / Recommended Model | Description & Pricing |
+| --- | --- | --- | --- |
+| `native` | *(Offline)* | `Built-in Rules + Local PP-OCR` | 100% offline, zero API cost, deterministic rule classifier + local ONNX OCR |
+| `openrouter` | `https://openrouter.ai/api/v1` | `qwen/qwen3-vl-32b-instruct` | **Recommended:** Ultra-fast dedicated Vision OCR ($0.10/M tokens, 0.72s). DeepSeek Flash Vision: `deepseek/deepseek-v4-flash-vision-exp` ($0.22/M). |
+| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat` | Cost-effective text reasoning & JSON extraction ($0.25/M tokens) |
+| `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | Direct OpenAI Vision ($0.15/M tokens) |
+| `ollama` | `http://localhost:11434/v1` | `llama3.2-vision` | Local multimodal vision running on your own GPU/CPU |
+| `groq` | `https://api.groq.com/openai/v1` | `llama-3.1-8b-instant` | Ultra-low latency text classification on Groq LPUs |
+
+### Top 2026 OpenRouter Models for Document Processing
+
+- **Best for Visual Document OCR (Scans, receipts, stamps, tables, skewed angles):**
+  - `qwen/qwen3-vl-32b-instruct` ($0.10/M in, $0.41/M out, 0.72s latency) — Ultra-fast dedicated Vision OCR for receipts & docs.
+  - `deepseek/deepseek-v4-flash-vision-exp` ($0.22/M in, $0.66/M out, 1M context, 0.80s latency) — DeepSeek's native Flash Vision.
+  - `google/gemini-3.1-flash-lite` ($0.25/M in, $1.50/M out, 1M context, 1.25s latency) — Google's latest 3.x Flash vision tier.
+  - `google/gemini-3.8-flash` ($0.75/M in, $3.75/M out, 1M context) — Flagship 3.8 Flash with native reasoning and layout parsing.
+  - `openai/gpt-5-nano` ($0.05/M in, $0.40/M out, 400k context) — OpenAI's newest multimodal nano model.
+- **Best for Deep Thinking & Complex Reasoning (Tax docs, contracts, ambiguous cross-references):**
+  - `qwen/qwen3-vl-30b-a3b-thinking` ($0.20/M in, $2.40/M out, 262k context) — Visual OCR + native chain-of-thought thinking tokens.
+  - `deepseek/deepseek-r1-0528` ($0.50/M in, $2.15/M out, 163k context) — Flagship open reasoning model for tricky legal contracts.
+  - `~deepseek/deepseek-v4-flash-latest` ($0.035/M in, $0.106/M out, 1.3M context) — Dirt-cheap ($0.035/M) high-speed classification.
+  - `qwen/qwen3.7-flash` ($0.030/M in, $0.130/M out, 1M context) — Ultra-budget, rapid 1.0s logical deduction.
 
 The dispatcher adds bearer auth, a request timeout, and exponential backoff with capped retries.
 
@@ -138,7 +154,7 @@ python main.py
 {
   "watch_directories": ["./Temporary/Unprocessed"],
   "provider": "openrouter",
-  "model_name": "google/gemini-2.5-flash:free",
+  "model_name": "google/gemini-2.5-flash",
   "api_key": "YOUR_OPENROUTER_API_KEY_HERE",
   "num_workers": 2,
   "stability_timeout": 30

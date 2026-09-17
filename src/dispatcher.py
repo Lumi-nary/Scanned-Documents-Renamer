@@ -17,7 +17,7 @@ class AIAPIDispatcher:
         self,
         api_key: str,
         base_url: str = "https://openrouter.ai/api/v1",
-        model_name: str = "google/gemini-2.5-flash:free",
+        model_name: str = "qwen/qwen3-vl-32b-instruct",
         max_retries: int = 3,
         backoff_factor: float = 1.5,
         max_backoff_delay: float = 30.0,
@@ -41,14 +41,21 @@ class AIAPIDispatcher:
         """
         Dispatches prompt_text or user_content (image/text payload) to the AI provider endpoint with automatic retries.
         """
-        if self.fallback_local_mode or self.mock_mode or self.api_key in ("mock-key", "your-api-key-here", ""):
-            logger.info("[LOCAL EXTRACTION MODE] Processing payload locally.")
+        if self.mock_mode or self.api_key in ("mock-key", "your-api-key-here") or self.fallback_local_mode:
+            logger.info("[MOCK MODE] Returning mock response for test/mock key.")
             return '{"filename": "Mock_Document_01_01_2024.pdf", "summary": "Mock AI Summary (Local Mode)"}'
 
+        is_local_endpoint = any(h in self.base_url.lower() for h in ['localhost', '127.0.0.1', '0.0.0.0'])
+
+        if not is_local_endpoint and not self.api_key:
+            logger.info("No cloud API key configured. Bypassing cloud dispatch.")
+            return None
+
+        auth_key = self.api_key if self.api_key else "ollama"
         endpoint = f"{self.base_url}/chat/completions"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {auth_key}",
             "HTTP-Referer": "https://github.com/Lumi-nary/Scanned-Documents-Renamer",
             "X-Title": "Scanned Documents Renamer"
         }
@@ -78,7 +85,14 @@ class AIAPIDispatcher:
 
                     if status_code == 200:
                         resp_data = json.loads(response_body)
-                        return resp_data["choices"][0]["message"]["content"]
+                        choices = resp_data.get("choices", [])
+                        if choices and len(choices) > 0:
+                            msg = choices[0].get("message", {})
+                            content = msg.get("content")
+                            if not content:
+                                content = msg.get("reasoning")
+                            return (content or "").strip()
+                        return ""
                     else:
                         logger.warning(f"Unexpected status code {status_code}: {response_body}")
 

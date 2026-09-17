@@ -22,6 +22,7 @@ class TestPipelineIntegration(unittest.TestCase):
             watch_directory=self.watch_dir_1,
             stability_timeout=5,
             stability_poll_interval=0.1,
+            provider="openrouter",
             api_key="mock-key",
             num_workers=1
         )

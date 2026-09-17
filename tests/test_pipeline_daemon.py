@@ -68,6 +68,44 @@ class TestPipelineDaemon(unittest.TestCase):
         loaded = PipelineConfig.load(settings_path)
         self.assertEqual(loaded.provider, "deepseek")
         self.assertEqual(loaded.model_name, "deepseek-chat")
+    def test_recursive_watch_folder_scan(self):
+        # Create nested subdirectories with a document
+        sub_dir = os.path.join(self.watch_dir, "2026-Batch", "Unprocessed")
+        os.makedirs(sub_dir, exist_ok=True)
+        test_file = os.path.join(sub_dir, "invoice_001.pdf")
+        with open(test_file, "w") as f:
+            f.write("%PDF-1.4 dummy content")
+
+        enqueued = self.daemon.scan_watched_folder()
+        self.assertIn(test_file, enqueued)
+
+    def test_update_watch_directories_auto_scan(self):
+        self.daemon.start(mock_mode=True)
+        # Create a new separate watch directory with files
+        new_watch = os.path.join(self.temp_dir, "NewFolder", "SubBatch")
+        os.makedirs(new_watch, exist_ok=True)
+        new_file = os.path.join(new_watch, "scanned_doc.pdf")
+        with open(new_file, "w") as f:
+            f.write("%PDF-1.4 new scan content")
+
+        enqueued = self.daemon.update_watch_directories([new_watch])
+        self.assertIn(new_file, enqueued)
+        self.daemon.stop()
+
+    def test_client_directories_deep_discovery(self):
+        clients_root = os.path.join(self.temp_dir, "ClientsRoot")
+        os.makedirs(os.path.join(clients_root, "Litigation", "Pacific Trading Corp"), exist_ok=True)
+        os.makedirs(os.path.join(clients_root, "Finance", "Box 1", "Solar Power Inc"), exist_ok=True)
+        os.makedirs(os.path.join(clients_root, "Direct Client Corp"), exist_ok=True)
+
+        self.daemon.update_clients_directory(clients_root)
+        discovered = self.daemon.get_client_directories()
+
+        self.assertIn("Pacific Trading Corp", discovered)
+        self.assertIn("Solar Power Inc.", discovered)
+        self.assertIn("Direct Client Corp", discovered)
+        self.assertIn("General Clients", discovered)
 
 if __name__ == "__main__":
     unittest.main()
+

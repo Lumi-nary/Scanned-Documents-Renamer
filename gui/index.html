@@ -99,19 +99,85 @@
         </div>
       </div>
 
-      <!-- Card 4: Active Client Sticky Context -->
-      <div class="stat-card">
-        <div class="stat-icon-wrapper stat-icon-indigo">
+      <!-- Card 4: Active Client Sticky Context & Locking -->
+      <div class="stat-card" id="card-active-client">
+        <div class="stat-icon-wrapper stat-icon-indigo" id="icon-client-wrapper">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
         <div class="stat-content">
-          <div class="stat-label">Active Client Context</div>
-          <div id="metric-active-client" class="stat-value" title="Context carried across unscoped batch scans">None</div>
+          <div class="stat-label-header">
+            <span class="stat-label">Active Client Context</span>
+            <span id="client-lock-badge" class="client-lock-pill unlocked" title="Unlocked: Dynamically auto-detected from documents">Auto</span>
+          </div>
+          <div class="client-selector-wrap">
+            <button type="button" id="btn-select-client" class="client-context-btn" title="Click to select or lock client">
+              <span id="metric-active-client" class="active-client-label">None (Auto-detect)</span>
+              <svg class="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <!-- Dropdown Menu for selecting client or locking -->
+            <div id="active-client-dropdown" class="client-dropdown-menu header-client-dropdown">
+              <div class="client-dropdown-search-wrap">
+                <input type="text" id="active-client-search" class="client-dropdown-search" placeholder="Filter or search client..." />
+              </div>
+              <!-- Quick Action Toolbar in Dropdown Header -->
+              <div class="client-dropdown-quick-bar">
+                <button type="button" id="btn-dropdown-rescan-folders" class="btn-dropdown-tool" title="Scan disk for client folders and refresh list">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>Scan Folders</span>
+                </button>
+                <button type="button" id="btn-dropdown-browse-folder" class="btn-dropdown-tool" title="Browse disk for a specific client folder to lock to">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Browse Folder...</span>
+                </button>
+              </div>
+              <div class="client-dropdown-lock-banner">
+                <label class="lock-checkbox-label">
+                  <input type="checkbox" id="chk-lock-client" />
+                  <span class="lock-checkbox-custom"></span>
+                  <span class="lock-checkbox-text">🔒 Lock Context (Force all scans to this client)</span>
+                </label>
+              </div>
+              <div id="active-client-list" class="client-dropdown-list">
+                <!-- Dynamically populated with client folders -->
+              </div>
+              <div class="client-dropdown-footer">
+                <div class="client-dropdown-item new-client-action" id="action-header-new-client">
+                  <span>➕ Custom Client Name...</span>
+                </div>
+                <div class="client-dropdown-item clear-client-action" id="action-header-clear-client">
+                  <span>❌ Reset to Auto (Clear)</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <button id="btn-clear-client" class="btn btn-secondary btn-sm" title="Reset active client context" style="display:none;">Clear</button>
+        <div class="client-card-actions">
+          <button type="button" id="btn-card-scan-folders" class="btn-card-action" title="Scan disk for client folders and refresh list">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </button>
+          <button type="button" id="btn-toggle-lock-client" class="btn-lock-toggle" title="Toggle Lock (Locking forces all incoming scans into this client folder)">
+            <svg id="icon-lock-state" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            </svg>
+          </button>
+          <button id="btn-clear-client" class="btn btn-secondary btn-sm" title="Reset active client context" style="display:none;">Clear</button>
+        </div>
       </div>
     </section>
 
@@ -163,7 +229,16 @@
             <div class="activity-title">
               <span>Recently Ingested & Filed Documents</span>
             </div>
-            <button id="btn-clear-feed" class="btn btn-secondary btn-sm" title="Clear activity list">Clear View</button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button id="btn-scan-feed" class="btn btn-secondary btn-sm" title="Scan watched scanner folder now for unprocessed documents">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Scan Folder Now</span>
+              </button>
+              <button id="btn-clear-feed" class="btn btn-secondary btn-sm" title="Clear activity list">Clear View</button>
+            </div>
           </div>
 
           <div id="activity-feed-list" class="activity-feed-scroll">
@@ -192,44 +267,229 @@
               <label class="form-label" for="setting-watch-dir">Scanner Output Folder (Watched Directory)</label>
               <div class="input-with-button">
                 <input type="text" id="setting-watch-dir" class="form-input" placeholder="e.g. C:\Scans\Temporary\Unprocessed" required>
-                <button type="button" id="btn-browse-folder" class="btn btn-secondary">
+                <button type="button" id="btn-browse-folder" class="btn btn-secondary" title="Browse for scanner output watch folder">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <span>Browse...</span>
                 </button>
+                <button type="button" id="btn-scan-watched-folder" class="btn btn-secondary" title="Scan watched scanner folder for waiting files">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <span>Scan Folder Now</span>
+                </button>
               </div>
-              <div class="form-hint">Choose the folder where your scanner saves newly scanned files.</div>
+              <div class="form-hint">Folder where your scanner deposits newly scanned PDF files.</div>
             </div>
 
-            <!-- Provider & Mock Option -->
+            <!-- Clients Base Directory -->
+            <div class="form-group">
+              <label class="form-label" for="setting-clients-dir">Clients Root Folder (Destination / Client Directories)</label>
+              <div class="input-with-button">
+                <input type="text" id="setting-clients-dir" class="form-input" placeholder="Auto-detected from scanner path structure (or click Browse to choose custom folder)">
+                <button type="button" id="btn-browse-clients-folder" class="btn btn-secondary" title="Browse for root folder containing client directories">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Browse...</span>
+                </button>
+                <button type="button" id="btn-scan-clients-folder" class="btn btn-secondary" title="Scan clients directory for client subfolders">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>Scan Folders</span>
+                </button>
+              </div>
+              <div class="form-hint">Root folder where client directories and <code>Clients.docx</code> reside (leave blank to auto-detect from scanner folder structure).</div>
+            </div>
+
+            <!-- Provider & Engine Options -->
             <div class="form-row-grid">
               <div class="form-group">
-                <label class="form-label" for="setting-provider">AI Provider</label>
+                <label class="form-label" for="setting-provider">Ingestion &amp; AI Engine</label>
                 <select id="setting-provider" class="form-select">
-                  <option value="openrouter">OpenRouter (Gemini, Claude, DeepSeek, Free models)</option>
-                  <option value="deepseek">DeepSeek Direct (DeepSeek-V3 / Chat)</option>
-                  <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
-                  <option value="groq">Groq (Ultra-fast Llama-3.1)</option>
-                  <option value="mock">Mock Offline Mode (No API key needed / Testing)</option>
+                  <option value="native">Native Engine (100% Offline — Built-in Rules &amp; Local PP-OCR) [Accuracy May Vary]</option>
+                  <option value="openrouter">OpenRouter (Recommended — Qwen 3 VL, DeepSeek Flash Vision, Gemini 3.x)</option>
+                  <option value="ollama">Ollama (Local LLM — localhost:11434, e.g. Llama 3.2, Qwen 2.5)</option>
+                  <option value="lmstudio">LM Studio (Local LLM — localhost:1234)</option>
+                  <option value="openai">OpenAI (Cloud GPT-4o, GPT-4o-mini)</option>
+                  <option value="deepseek">DeepSeek Direct (Cloud DeepSeek-V3 / Chat)</option>
+                  <option value="groq">Groq (Cloud Ultra-fast Llama-3.1)</option>
+                  <option value="custom">Custom OpenAI-Compatible Endpoint</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="setting-model">Model Name</label>
-                <input type="text" id="setting-model" class="form-input" placeholder="e.g. google/gemini-2.5-flash:free">
-                <div class="form-hint">Recommended for OpenRouter: <code>google/gemini-2.5-flash:free</code></div>
+                <label class="form-label" for="setting-model">Model / Processing Mode</label>
+                <input type="text" id="setting-model" class="form-input" placeholder="Built-in Rules + Local PP-OCR">
+                <div class="form-hint" id="hint-model">Standard built-in deterministic rules and local OCR.</div>
+              </div>
+            </div>
+
+            <!-- Interactive Model Quick-Selector for OpenRouter / Providers -->
+            <div id="model-quick-presets" class="model-chips-container" style="display: none;">
+              <div class="model-chips-header">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>Quick-Select AI Model (Click to choose):</span>
+              </div>
+
+              <!-- OpenRouter Models -->
+              <div id="chips-openrouter" class="provider-model-group">
+                <div class="model-subgroup">
+                  <div class="model-subgroup-title">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>SOTA Vision &amp; Document OCR (Cheap &amp; Fast)</span>
+                  </div>
+                  <div class="model-chips-list">
+                    <button type="button" class="model-chip active" data-model="qwen/qwen3-vl-32b-instruct" data-hint="Qwen 3 VL 32B · SOTA Document &amp; Table OCR · Ultra-Fast (0.72s) · $0.10/M tokens (Recommended)">
+                      <span class="chip-badge rec">Best OCR</span>
+                      <span class="chip-name">Qwen 3 VL 32B</span>
+                      <span class="chip-price">$0.10/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="deepseek/deepseek-v4-flash-vision-exp" data-hint="DeepSeek V4 Flash Vision Exp · 1M Context · Blazing Fast (0.80s) · $0.22/M tokens">
+                      <span class="chip-badge budget">Fast Vision</span>
+                      <span class="chip-name">DeepSeek Flash Vision</span>
+                      <span class="chip-price">$0.22/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="google/gemini-3.1-flash-lite" data-hint="Google Gemini 3.1 Flash Lite · 1M Context · Latest 3.x Multimodal Vision · $0.25/M tokens">
+                      <span class="chip-badge doc">Gemini 3.1</span>
+                      <span class="chip-name">Gemini 3.1 Flash Lite</span>
+                      <span class="chip-price">$0.25/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="google/gemini-3.8-flash" data-hint="Google Gemini 3.8 Flash · 1M Context · Flagship Reasoning &amp; Document Accuracy · $0.75/M tokens">
+                      <span class="chip-badge rec">Gemini 3.8</span>
+                      <span class="chip-name">Gemini 3.8 Flash</span>
+                      <span class="chip-price">$0.75/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="openai/gpt-5-nano" data-hint="OpenAI GPT-5 Nano · 400k Context · Multimodal Vision &amp; OCR · $0.05/M tokens">
+                      <span class="chip-badge budget">GPT-5 Nano</span>
+                      <span class="chip-name">GPT-5 Nano</span>
+                      <span class="chip-price">$0.05/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="~openai/gpt-luna-latest" data-hint="OpenAI GPT Luna · 1M+ Context · Cost-Efficient High-Speed Document &amp; Vision OCR · $0.20/M tokens">
+                      <span class="chip-badge doc">GPT Luna</span>
+                      <span class="chip-name">GPT Luna</span>
+                      <span class="chip-price">$0.20/M</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="model-subgroup">
+                  <div class="model-subgroup-title">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    <span>Thinking &amp; Reasoning (Logic &amp; Deduction)</span>
+                  </div>
+                  <div class="model-chips-list">
+                    <button type="button" class="model-chip" data-model="qwen/qwen3-vl-30b-a3b-thinking" data-hint="Qwen 3 VL Thinking · Visual OCR combined with step-by-step reasoning tokens · $0.20/M tokens">
+                      <span class="chip-badge think">Vision + Think</span>
+                      <span class="chip-name">Qwen 3 VL Thinking</span>
+                      <span class="chip-price">$0.20/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="deepseek/deepseek-r1-0528" data-hint="DeepSeek R1 · Flagship step-by-step reasoning for complex contracts, tax &amp; ambiguous documents · $0.50/M tokens">
+                      <span class="chip-badge think">Thinking SOTA</span>
+                      <span class="chip-name">DeepSeek R1</span>
+                      <span class="chip-price">$0.50/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="~deepseek/deepseek-v4-flash-latest" data-hint="DeepSeek V4 Flash Latest · 1.3M Context · Dirt-Cheap Fast Classification · $0.035/M tokens">
+                      <span class="chip-badge cheap">Ultra-Cheap</span>
+                      <span class="chip-name">DeepSeek V4 Flash</span>
+                      <span class="chip-price">$0.035/M</span>
+                    </button>
+                    <button type="button" class="model-chip" data-model="qwen/qwen3.7-flash" data-hint="Qwen 3.7 Flash · 1M Context · Rapid 1.0s Deduction · $0.030/M tokens">
+                      <span class="chip-badge cheap">Budget Logic</span>
+                      <span class="chip-name">Qwen 3.7 Flash</span>
+                      <span class="chip-price">$0.030/M</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ollama Models -->
+              <div id="chips-ollama" class="provider-model-group" style="display: none;">
+                <div class="model-chips-list">
+                  <button type="button" class="model-chip" data-model="llama3.2-vision" data-hint="Local Multimodal Llama 3.2 Vision on Ollama">
+                    <span class="chip-badge doc">Vision</span>
+                    <span class="chip-name">llama3.2-vision</span>
+                  </button>
+                  <button type="button" class="model-chip" data-model="qwen2.5-vl:7b" data-hint="Local Qwen 2.5 VL on Ollama">
+                    <span class="chip-badge doc">Vision OCR</span>
+                    <span class="chip-name">qwen2.5-vl:7b</span>
+                  </button>
+                  <button type="button" class="model-chip" data-model="llama3.2:3b" data-hint="Compact 3B local text model on Ollama">
+                    <span class="chip-badge cheap">Fast</span>
+                    <span class="chip-name">llama3.2:3b</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Provider Mode Status / Info Card -->
+            <div id="provider-badge-card" class="provider-badge-card native">
+              <div class="provider-badge-icon" id="provider-badge-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </div>
+              <div class="provider-badge-content">
+                <div class="provider-badge-title" id="provider-badge-title">100% Offline &amp; Zero Setup</div>
+                <div class="provider-badge-desc" id="provider-badge-desc">Documents are processed locally on your machine using built-in intelligent rules and local PP-OCR. Zero API key, zero cost, and no internet connection required.</div>
+              </div>
+            </div>
+
+            <!-- Native Mode Caution / Recommendation Banner -->
+            <div id="native-caution-banner" class="provider-caution-banner">
+              <div class="caution-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              <div class="caution-content">
+                <div class="caution-title">
+                  <span>Caution: Local OCR Accuracy &amp; Inaccuracy Limitations</span>
+                  <span class="caution-badge">Offline Notice</span>
+                </div>
+                <div class="caution-desc">
+                  Native deterministic rules and local PP-OCR run 100% offline without an API key or internet. However, local optical character recognition may produce inaccurate text or missed headers on degraded scans, faint stamps, handwriting, distorted angles, or non-standard document formats.
+                </div>
+                <div class="caution-recommendation">
+                  <div class="caution-rec-text">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span><strong>Recommendation:</strong> For higher classification precision and multimodal visual layout intelligence, use an <strong>AI API</strong> (e.g. Qwen 3 VL, DeepSeek Flash Vision, or Gemini 3.x via OpenRouter) or a <strong>Local LLM</strong>.</span>
+                  </div>
+                  <button type="button" id="btn-switch-to-ai" class="btn-switch-ai">
+                    <span>Switch to Recommended AI</span>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
             <!-- API Key -->
-            <div class="form-group">
+            <div class="form-group" id="group-api-key">
               <label class="form-label" for="setting-api-key">API Key</label>
               <div class="input-with-button">
-                <input type="password" id="setting-api-key" class="form-input" placeholder="Enter your provider API key">
+                <input type="password" id="setting-api-key" class="form-input" placeholder="Not required for Native mode">
                 <button type="button" id="btn-toggle-key-visibility" class="btn btn-secondary btn-sm" title="Show or hide API key">Show</button>
               </div>
-              <div class="form-hint">Stored safely in local <code>settings.json</code>. Never sent anywhere except directly to your chosen provider.</div>
+              <div class="form-hint" id="hint-api-key">Stored safely in local <code>settings.json</code>. Never sent anywhere except directly to your chosen provider.</div>
             </div>
 
             <!-- Workers & Timeout -->
@@ -245,6 +505,30 @@
                 <input type="number" id="setting-stability" class="form-input" min="2" max="120" value="30">
                 <div class="form-hint">Waits for the scanner to finish saving multi-page scans.</div>
               </div>
+            </div>
+
+            <!-- Active Client Context & Lock Controls -->
+            <div class="form-group" style="padding: 14px 16px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <label class="form-label" style="margin-bottom: 0;">Active Client Context (Batch Routing)</label>
+                <span id="setting-client-lock-badge" class="client-lock-pill unlocked">Auto</span>
+              </div>
+              <div class="input-with-button">
+                <input type="text" id="setting-active-client-input" class="form-input" placeholder="Auto-detect from documents (or type/browse to lock)...">
+                <button type="button" id="btn-settings-browse-client" class="btn btn-secondary btn-sm" title="Browse disk for a client folder to lock to">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <span>Browse Folder...</span>
+                </button>
+                <button type="button" id="btn-settings-toggle-lock" class="btn btn-secondary btn-sm" title="Toggle Lock">
+                  <span id="label-settings-lock">🔒 Lock</span>
+                </button>
+                <button type="button" id="btn-settings-clear-client" class="btn btn-secondary btn-sm" title="Clear context">
+                  <span>Clear</span>
+                </button>
+              </div>
+              <div class="form-hint">When locked, all incoming scanned documents will be routed into this client folder, bypassing OCR detection.</div>
             </div>
 
             <!-- Checkboxes -->

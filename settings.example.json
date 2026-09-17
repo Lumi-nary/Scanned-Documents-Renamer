@@ -2,9 +2,9 @@
   "watch_directories": [
     "./Temporary/Unprocessed"
   ],
-  "provider": "openrouter",
-  "model_name": "google/gemini-2.5-flash-lite",
-  "api_key": "YOUR_OPENROUTER_API_KEY_HERE",
+  "provider": "native",
+  "model_name": "Built-in Rules + Local PP-OCR",
+  "api_key": "",
   "num_workers": 2,
   "stability_timeout": 30
 }

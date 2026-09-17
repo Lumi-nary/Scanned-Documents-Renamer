@@ -36,6 +36,7 @@ class DynamicWatchManager:
     def add_watch_directory(self, new_directory_path: str, recursive: bool = True) -> str:
         """
         Adds a new target directory to monitor (external or internal path).
+        Defaults to recursive monitoring.
         """
         with self._lock:
             abs_path = os.path.abspath(new_directory_path)
@@ -58,8 +59,8 @@ class DynamicWatchManager:
         """
         Sets a single watch directory path (backwards-compatibility wrapper).
         """
-        res = self.set_watch_directories([new_directory_path], recursive=recursive)
-        return res[0] if res else os.path.abspath(new_directory_path)
+        paths = self.set_watch_directories([new_directory_path], recursive=recursive)
+        return paths[0] if paths else os.path.abspath(new_directory_path)
 
     def set_watch_directories(self, directory_paths: List[str], recursive: bool = True) -> List[str]:
         """

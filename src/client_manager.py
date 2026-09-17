@@ -124,9 +124,8 @@ def format_client_name(name: Optional[str]) -> str:
     if not name or not str(name).strip():
         return "General Clients"
 
-
     clean_name = str(name).strip().strip('"\'')
-    if not clean_name:
+    if not clean_name or clean_name.lower() in ("none", "null", "none (auto-detect)", "auto", "auto-detect", "unrecognized"):
         return "General Clients"
 
     # Strip trailing commas or periods from full string before tokenization
@@ -208,48 +207,104 @@ INVALID_CLIENT_PHRASES = [
     'know all men', 'subscribed and sworn', 'notary public'
 ]
 
-def extract_client_name_from_pdf(pdf_path: str) -> str:
+def extract_client_name_from_pdf(
+    pdf_path: str,
+    text_p1: Optional[str] = None,
+    text_full: Optional[str] = None,
+    known_clients: Optional[List[str]] = None
+) -> str:
     try:
-        import fitz
-        with fitz.open(pdf_path) as doc:
-            if len(doc) > 0:
-                text_p1 = doc[0].get_text()
-                text_full = '\n'.join([doc[i].get_text() for i in range(min(len(doc), 3))])
+        if text_p1 is None or text_full is None:
+            try:
+                from src.ocr_engine import extract_pdf_pages_text
+                text_p1, text_full = extract_pdf_pages_text(pdf_path)
+            except Exception:
+                import fitz
+                with fitz.open(pdf_path) as doc:
+                    if len(doc) > 0:
+                        text_p1 = doc[0].get_text()
+                        text_full = '\n'.join([doc[i].get_text() for i in range(min(len(doc), 3))])
+                    else:
+                        text_p1 = ""
+                        text_full = ""
 
-                # 1. Corporate Officer Pattern (Secretary, Treasurer, President, etc.)
-                OFFICER_ROLES = r'(?:(?:Corporate|Company)\s+Secretary|Secretary|Treasurer|Corporate\s+Treasurer|President|Corporate\s+President|Managing\s+Director|Director|Chairman|Trustee)'
-                officer_match = re.search(
-                    r'(?:I\s+am\s+the\s+|being\s+the\s+(?:duly\s+)?(?:elected\s+and\s+)?(?:qualified\s+)?|duly\s+(?:elected\s+and\s+)?qualified\s+|elected\s+and\s+qualified\s+|incumbent\s+|being\s+the\s+)?' + OFFICER_ROLES + r'\s+(?:of\s+)?([A-Za-z0-9\s,\.\-&]+?)(?:\s*,\s*\[\s*hereinafter|\s*\[\s*hereinafter|\s*,\s*\(\s*(?:the|hereinafter)|\s*\(\s*(?:the|hereinafter)|\s*,\s*a\s+(?:domestic\s+)?corporation|\s*,\s*after|\s*,\s*with\s+principal|\s*\n\s*\n|\.\s)',
-                    text_full,
-                    re.IGNORECASE
-                )
-                if officer_match:
-                    raw_cname = officer_match.group(1).strip().rstrip(',').strip()
-                    if 3 <= len(raw_cname) <= 80 and not any(k in raw_cname.lower() for k in INVALID_CLIENT_PHRASES):
-                        return format_client_name(raw_cname)
+        p1_search = text_p1 or ""
+        full_search = text_full or ""
 
-                # 2. Known Clients / Direct Header search
-                if 'beacon homes' in text_full.lower():
-                    return format_client_name("Beacon Homes Development Corporation")
-                if 'zenith realty' in text_full.lower():
-                    return format_client_name("Zenith Realty Development Corp.")
+        # 0. Highest Priority: Match against Known Client Directories on disk
+        if known_clients:
+            ignored_client_names = {
+                "general clients", "boxes", "finance", "irrelevants",
+                "litigation", "temporary", "temp", "office", "unproccesed",
+                "unprocessed", "output", "build", "dist"
+            }
+            # Sort longest to shortest for specific matching (e.g. "Solid Platinum Holdings Corp" before "Solid")
+            candidates = sorted(
+                [c for c in known_clients if c and c.lower() not in ignored_client_names and len(c.strip()) >= 3],
+                key=len,
+                reverse=True
+            )
+            for client in candidates:
+                # Direct word-boundary match (e.g. "Edgar L. Borillo")
+                c_esc = re.escape(client)
+                c_pat = r'(?<![A-Za-z0-9])' + c_esc + r'(?![A-Za-z0-9])'
+                if re.search(c_pat, p1_search, re.IGNORECASE) or re.search(c_pat, full_search, re.IGNORECASE):
+                    logger.info(f"Matched known client directory from document text: '{client}'")
+                    return format_client_name(client)
 
+                # Optional dots match (e.g. "Edgar L Borillo" matching "Edgar L. Borillo")
+                c_dots = c_esc.replace(r'\.', r'\.?')
+                c_dots_pat = r'(?<![A-Za-z0-9])' + c_dots + r'(?![A-Za-z0-9])'
+                if re.search(c_dots_pat, p1_search, re.IGNORECASE) or re.search(c_dots_pat, full_search, re.IGNORECASE):
+                    logger.info(f"Matched known client directory (dot-flexible): '{client}'")
+                    return format_client_name(client)
 
-                # 3. TO / Attention / Client line (Require line start & colon to prevent matching "to <verb>")
-                to_match = re.search(r'(?:^|\n)\s*(?:ATTENTION|ATTN|CLIENT)\s*:\s*([A-Za-z0-9\s,\.\-&]{3,60})', text_p1, re.IGNORECASE)
-                if not to_match:
-                    to_match = re.search(r'(?:^|\n)\s*TO\s*:\s*([A-Za-z0-9\s,\.\-&]{3,60})', text_p1)
-                if to_match:
-                    cleaned = to_match.group(1).strip().split('\n')[0].strip()
-                    if len(cleaned) >= 3 and not any(k in cleaned.lower() for k in INVALID_CLIENT_PHRASES):
-                        return format_client_name(cleaned)
+                # Base name match without corporate suffixes (e.g. "Strongbond Philippines" for "Strongbond Philippines, Inc")
+                base_c = re.sub(r'[,.]?\s*(?:Inc\.?|Corp\.?|LLC|OPC|Co\.?|Ltd\.?)$', '', client, flags=re.IGNORECASE).strip()
+                if len(base_c) >= 5 and base_c.lower() != client.lower():
+                    base_pat = r'(?<![A-Za-z0-9])' + re.escape(base_c) + r'(?![A-Za-z0-9])'
+                    if re.search(base_pat, p1_search, re.IGNORECASE) or re.search(base_pat, full_search, re.IGNORECASE):
+                        logger.info(f"Matched known client directory from base name: '{client}'")
+                        return format_client_name(client)
 
-                # 4. Summary of Services Rendered for <Client>
-                sos_match = re.search(r'Services\s+Rendered\s+for\s+([A-Z0-9\s,\.\-&]{4,60})', text_full, re.IGNORECASE)
-                if sos_match:
-                    cleaned = sos_match.group(1).strip().split('\n')[0].strip()
-                    if not any(k in cleaned.lower() for k in INVALID_CLIENT_PHRASES):
-                        return format_client_name(cleaned)
+        if full_search or p1_search:
+            # 1. Corporate Officer Pattern (Secretary, Treasurer, President, etc.)
+            OFFICER_ROLES = r'(?:(?:Corporate|Company)\s+Secretary|Secretary|Treasurer|Corporate\s+Treasurer|President|Corporate\s+President|Managing\s+Director|Director|Chairman|Trustee)'
+            officer_match = re.search(
+                r'(?:I\s+am\s+the\s+|being\s+the\s+(?:duly\s+)?(?:elected\s+and\s+)?(?:qualified\s+)?|duly\s+(?:elected\s+and\s+)?qualified\s+|elected\s+and\s+qualified\s+|incumbent\s+|being\s+the\s+)?' + OFFICER_ROLES + r'\s+(?:of\s+)?([A-Za-z0-9\s,\.\-&]+?)(?:\s*,\s*\[\s*hereinafter|\s*\[\s*hereinafter|\s*,\s*\(\s*(?:the|hereinafter)|\s*\(\s*(?:the|hereinafter)|\s*,\s*a\s+(?:domestic\s+)?corporation|\s*,\s*after|\s*,\s*with\s+principal|\s*\n\s*\n|\.\s)',
+                full_search,
+                re.IGNORECASE
+            )
+            if officer_match:
+                raw_cname = officer_match.group(1).strip().rstrip(',').strip()
+                # Normalize line breaks within corporate entity names
+                raw_cname = re.sub(r'[\r\n]+', ' ', raw_cname).strip()
+                # Strip any accidental notarial markers concatenated in OCR or multi-line text
+                raw_cname = re.sub(r'\b(?:Doc|Page|Book|Series)\b.*$', '', raw_cname, flags=re.IGNORECASE).strip()
+                if 3 <= len(raw_cname) <= 80 and not any(k in raw_cname.lower() for k in INVALID_CLIENT_PHRASES):
+                    return format_client_name(raw_cname)
+
+            # 2. Known Clients / Direct Header search
+            if 'beacon homes' in full_search.lower():
+                return format_client_name("Beacon Homes Development Corporation")
+            if 'zenith realty' in full_search.lower():
+                return format_client_name("Zenith Realty Development Corp.")
+
+            # 3. TO / Attention / Client line (Require line start & colon to prevent matching "to <verb>")
+            to_match = re.search(r'(?:^|\n)\s*(?:ATTENTION|ATTN|CLIENT)\s*:\s*([A-Za-z0-9\s,\.\-&]{3,60})', p1_search, re.IGNORECASE)
+            if not to_match:
+                to_match = re.search(r'(?:^|\n)\s*TO\s*:\s*([A-Za-z0-9\s,\.\-&]{3,60})', p1_search)
+            if to_match:
+                cleaned = to_match.group(1).strip().split('\n')[0].strip()
+                if len(cleaned) >= 3 and not any(k in cleaned.lower() for k in INVALID_CLIENT_PHRASES):
+                    return format_client_name(cleaned)
+
+            # 4. Summary of Services Rendered for <Client>
+            sos_match = re.search(r'Services\s+Rendered\s+for\s+([A-Z0-9\s,\.\-&]{4,60})', full_search, re.IGNORECASE)
+            if sos_match:
+                cleaned = sos_match.group(1).strip().split('\n')[0].strip()
+                if not any(k in cleaned.lower() for k in INVALID_CLIENT_PHRASES):
+                    return format_client_name(cleaned)
 
     except Exception as e:
         logger.debug(f"Error extracting client name from {pdf_path}: {e}")
@@ -328,31 +383,135 @@ class ClientManager:
     Manages grouping files by Client Name, moving them to client directories outside Temporary,
     calculating date ranges, and updating Clients.docx.
     """
-    def __init__(self, base_watch_dir: str, update_docx: bool = False):
-        abs_watch = os.path.abspath(base_watch_dir)
-        path_parts = abs_watch.split(os.sep)
-        if "Temporary" in path_parts:
-            temp_idx = path_parts.index("Temporary")
-            self.root_dir = os.sep.join(path_parts[:temp_idx])
-            self.temp_dir = os.sep.join(path_parts[:temp_idx + 1])
-        else:
-            self.root_dir = os.path.dirname(abs_watch)
-            self.temp_dir = abs_watch
+    def __init__(self, base_watch_dir: str, clients_dir: Optional[str] = None, update_docx: bool = False):
+        self._lock = threading.Lock()
+        self.active_client: Optional[str] = None
+        self.is_client_locked: bool = False
+        self.update_docx = update_docx
+        self.set_base_directory(base_watch_dir, clients_dir=clients_dir)
 
-        if not self.root_dir:
-            self.root_dir = abs_watch
+    def set_base_directory(self, base_watch_dir: str, clients_dir: Optional[str] = None) -> None:
+        """
+        Configures base watch directory and resolves the parent root directory where client folders reside.
+        If clients_dir is explicitly specified, uses that as the root directory for client folders and Clients.docx.
+        """
+        abs_watch = os.path.abspath(base_watch_dir)
+        self.base_dir = abs_watch
+
+        if clients_dir and str(clients_dir).strip():
+            self.root_dir = os.path.abspath(str(clients_dir).strip())
+            self.temp_dir = abs_watch
+        else:
+            path_parts = abs_watch.split(os.sep)
+            lower_parts = [p.lower() for p in path_parts]
+            temp_idx = -1
+            for candidate in ("temporary", "temp"):
+                if candidate in lower_parts:
+                    temp_idx = lower_parts.index(candidate)
+                    break
+
+            if temp_idx != -1:
+                self.root_dir = os.sep.join(path_parts[:temp_idx])
+                self.temp_dir = os.sep.join(path_parts[:temp_idx + 1])
+            else:
+                self.root_dir = os.path.dirname(abs_watch)
+                self.temp_dir = abs_watch
+
+            if not self.root_dir:
+                self.root_dir = abs_watch
 
         self.docx_path = os.path.join(self.root_dir, "Clients.docx")
-        self.update_docx = update_docx
-        self.active_client: Optional[str] = None
-        self._lock = threading.Lock()
+
+    def get_client_directories(self, custom_root: Optional[str] = None) -> List[str]:
+        """
+        Returns a sorted list of existing client directory names located under root_dir.
+        Intelligently scans up to 3 levels deep to detect client folders organized directly
+        or categorized under folders like Litigation, Finance, Boxes, Corporate, Uncategorized, etc.
+        Excludes Temporary/staging directories, output, build, and hidden directories.
+        """
+        target_root = os.path.abspath(custom_root) if custom_root else self.root_dir
+        if not target_root or not os.path.exists(target_root):
+            return ["General Clients"]
+
+        ignored_names = {
+            "temporary", "temp", "unproccesed", "unprocessed", "office",
+            "output", "build", "dist", ".git", ".idea", ".vscode", "gui",
+            "tests", "src", "installer", "__pycache__", "tickets.md"
+        }
+        category_names = {
+            "boxes", "finance", "litigation", "corporate", "uncategorized",
+            "general clients", "clients", "tax", "legal", "accounting", "admin", "operations"
+        }
+
+        discovered_clients = set()
+        visited_dirs = set()
+
+        def _is_category_container(dir_name: str) -> bool:
+            lower = dir_name.lower().strip()
+            if lower in category_names:
+                return True
+            if re.match(r'^box(?:es|\s*\d+)?$', lower):
+                return True
+            return False
+
+        def _scan_dir(current_path: str, depth: int) -> None:
+            if depth > 3 or current_path in visited_dirs:
+                return
+            visited_dirs.add(current_path)
+
+            try:
+                entries = os.listdir(current_path)
+            except Exception as e:
+                logger.debug(f"Error listing directory '{current_path}': {e}")
+                return
+
+            for item in entries:
+                if item.startswith('.'):
+                    continue
+                lower_item = item.lower().strip()
+                if lower_item in ignored_names:
+                    continue
+
+                full_path = os.path.join(current_path, item)
+                if not os.path.isdir(full_path):
+                    continue
+
+                # If this directory is a known category container (e.g. Litigation, Finance, Box 1, Uncategorized),
+                # descend into it to find the real client directories within it.
+                if _is_category_container(item):
+                    _scan_dir(full_path, depth + 1)
+                else:
+                    # Check if this directory itself contains category containers (e.g. Finance containing Box 1, Box 2)
+                    try:
+                        sub_entries = [s for s in os.listdir(full_path) if os.path.isdir(os.path.join(full_path, s)) and not s.startswith('.')]
+                        if any(_is_category_container(s) for s in sub_entries):
+                            _scan_dir(full_path, depth + 1)
+                    except Exception:
+                        pass
+
+                    # Add this folder name as a candidate client folder
+                    formatted = format_client_name(item)
+                    if formatted and formatted.lower() not in category_names and formatted.lower() not in ignored_names:
+                        discovered_clients.add(formatted)
+
+        _scan_dir(target_root, depth=1)
+
+        if "General Clients" not in discovered_clients:
+            discovered_clients.add("General Clients")
+
+        return sorted(list(discovered_clients), key=lambda s: s.lower())
 
     def resolve_client_name(self, extracted_name: Optional[str]) -> Tuple[str, bool]:
         """
         Resolves client name using extracted metadata or carries over previous active client.
+        If active client is locked, unconditionally returns the locked active client.
         Returns (client_name, is_inherited).
         """
         with self._lock:
+            # If client context is explicitly locked, strictly route to the locked client
+            if self.is_client_locked and self.active_client:
+                return self.active_client, True
+
             clean_name = str(extracted_name).strip() if extracted_name else ""
             if clean_name and clean_name.lower() not in ("general clients", "none", "null", "unrecognized", ""):
                 formatted = format_client_name(clean_name)
@@ -365,17 +524,86 @@ class ClientManager:
 
             return "General Clients", False
 
-    def set_active_client(self, client_name: str) -> None:
+    def set_active_client(self, client_name: Optional[str]) -> None:
         with self._lock:
-            self.active_client = format_client_name(client_name)
+            clean = str(client_name).strip() if client_name else ""
+            if not clean or clean.lower() in ("none", "none (auto-detect)", "auto", "auto-detect", "null"):
+                self.active_client = None
+            else:
+                self.active_client = format_client_name(clean)
+
+    def set_and_lock_client(self, client_name: Optional[str], locked: bool = True) -> None:
+        with self._lock:
+            clean = str(client_name).strip() if client_name else ""
+            if not clean or clean.lower() in ("none", "none (auto-detect)", "auto", "auto-detect", "null"):
+                self.active_client = None
+                self.is_client_locked = False
+            else:
+                self.active_client = format_client_name(clean)
+                self.is_client_locked = bool(locked)
 
     def get_active_client(self) -> Optional[str]:
         with self._lock:
             return self.active_client
 
+    def set_client_locked(self, locked: bool) -> None:
+        with self._lock:
+            self.is_client_locked = bool(locked)
+
+    def is_locked(self) -> bool:
+        with self._lock:
+            return self.is_client_locked
+
+    def lock_active_client(self, client_name: Optional[str] = None) -> None:
+        with self._lock:
+            if client_name:
+                self.active_client = format_client_name(client_name)
+            self.is_client_locked = True
+
+    def unlock_active_client(self) -> None:
+        with self._lock:
+            self.is_client_locked = False
+
     def reset_active_client(self) -> None:
         with self._lock:
             self.active_client = None
+            self.is_client_locked = False
+
+    def find_client_directory(self, client_name: str) -> Optional[str]:
+        """
+        Searches under root_dir (up to 3 levels) for an existing directory matching client_name.
+        Returns the absolute path to the directory if found, otherwise None.
+        """
+        if not client_name or not self.root_dir or not os.path.exists(self.root_dir):
+            return None
+
+        clean_target = format_client_name(client_name).lower().strip()
+
+        # Check direct candidate paths first (fast path)
+        for candidate in [
+            os.path.join(self.root_dir, client_name),
+            os.path.join(self.root_dir, "Litigation", client_name),
+            os.path.join(self.root_dir, "Corporate", client_name),
+            os.path.join(self.root_dir, "Finance", client_name),
+            os.path.join(self.root_dir, "Uncategorized", client_name)
+        ]:
+            if os.path.exists(candidate) and os.path.isdir(candidate):
+                return candidate
+
+        # Walk up to 3 levels to locate any existing client folder (e.g. Finance/Box 1/<Client>)
+        target_root = self.root_dir
+        for root, dirs, _ in os.walk(target_root):
+            rel = os.path.relpath(root, target_root)
+            depth = 1 if rel == '.' else len(rel.split(os.sep)) + 1
+            if depth > 3:
+                dirs.clear()
+                continue
+
+            for d in dirs:
+                if d.lower().strip() == clean_target:
+                    return os.path.join(root, d)
+
+        return None
 
     def route_file_to_client(
         self,
@@ -385,12 +613,17 @@ class ClientManager:
         target_filename: Optional[str] = None
     ) -> str:
         """
-        Directly moves file into the client directory (<root_dir>/<client_name>/),
+        Directly moves file into the client directory (<root_dir>/<client_name>/ or <root_dir>/<Category>/<client_name>/),
         resolving any filename collisions and updating Clients.docx date range.
         Returns the final destination file path.
         """
         client_name = format_client_name(client_name)
-        client_dir = os.path.join(self.root_dir, client_name)
+
+        # Locate existing client folder across categories or default to root_dir/<client_name>
+        client_dir = self.find_client_directory(client_name)
+        if not client_dir:
+            client_dir = os.path.join(self.root_dir, client_name)
+
         os.makedirs(client_dir, exist_ok=True)
 
         filename = target_filename or os.path.basename(src_file)
@@ -444,15 +677,15 @@ class ClientManager:
         all_records = list(processed_records) if processed_records else []
         seen_paths = {r.get("file_path") for r in all_records if r.get("file_path")}
 
-        # Also scan Temporary directory & subfolders for any files waiting inside Temporary
+        # Also scan Temporary directory for any files waiting inside Temporary (current folder only)
         if os.path.exists(self.temp_dir):
-            for root, _, files in os.walk(self.temp_dir):
-                for fname in files:
+            try:
+                for fname in os.listdir(self.temp_dir):
                     if fname.lower() in ('wrap.txt', 'done.txt', '.wrap', 'wrapup.txt', 'wrap', '.ds_store'):
                         continue
                     if fname.startswith('.'):
                         continue
-                    fpath = os.path.join(root, fname)
+                    fpath = os.path.join(self.temp_dir, fname)
                     if os.path.isfile(fpath) and fpath not in seen_paths:
                         c_name = extract_client_name_from_pdf(fpath) if fname.lower().endswith('.pdf') else "General Clients"
                         all_records.append({
@@ -462,6 +695,8 @@ class ClientManager:
                             "doc_date": fname
                         })
                         seen_paths.add(fpath)
+            except Exception as e:
+                logger.error(f"Error scanning temporary directory '{self.temp_dir}': {e}")
 
         if not all_records:
             logger.info(f"No processed files found in '{self.temp_dir}' or records to wrap up.")

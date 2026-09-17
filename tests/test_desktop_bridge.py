@@ -78,5 +78,34 @@ class TestDesktopBridgeAPI(unittest.TestCase):
         self.assertIsNone(self.daemon.get_active_client())
         self.api.stop_pipeline()
 
+    def test_save_settings_with_new_folder_and_scan(self):
+        new_watch = os.path.join(self.temp_dir, "SubWatch", "Batch1")
+        os.makedirs(new_watch, exist_ok=True)
+        pdf_file = os.path.join(new_watch, "doc.pdf")
+        with open(pdf_file, "w") as f:
+            f.write("%PDF-1.4 sample")
+
+        clients_root = os.path.join(self.temp_dir, "Clients")
+        os.makedirs(os.path.join(clients_root, "Litigation", "Client A"), exist_ok=True)
+
+        self.api.start_pipeline()
+        res = self.api.save_settings({
+            "watch_directories": [new_watch],
+            "clients_directory": clients_root,
+            "provider": "mock"
+        })
+        self.assertTrue(res["success"])
+        self.assertIn("enqueued_count", res)
+        self.assertEqual(res["enqueued_count"], 1)
+        self.assertIn("Client A", res["client_list"])
+
+        # Test scan_client_directories with custom directory
+        custom_scan = self.api.scan_client_directories(custom_dir=clients_root)
+        self.assertTrue(custom_scan["success"])
+        self.assertIn("Client A", custom_scan["clients"])
+
+        self.api.stop_pipeline()
+
 if __name__ == "__main__":
     unittest.main()
+

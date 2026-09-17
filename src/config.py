@@ -8,13 +8,25 @@ from typing import Tuple, Dict, Any, List, Optional
 logger = logging.getLogger(__name__)
 
 PROVIDER_PRESETS: Dict[str, Dict[str, str]] = {
-    "deepseek": {
-        "base_url": "https://api.deepseek.com/v1",
-        "default_model": "deepseek-chat"
+    "native": {
+        "base_url": "",
+        "default_model": "Built-in Rules + Local PP-OCR"
+    },
+    "ollama": {
+        "base_url": "http://localhost:11434/v1",
+        "default_model": "llama3.2"
+    },
+    "lmstudio": {
+        "base_url": "http://localhost:1234/v1",
+        "default_model": "local-model"
     },
     "openrouter": {
         "base_url": "https://openrouter.ai/api/v1",
-        "default_model": "google/gemini-2.5-flash:free"
+        "default_model": "qwen/qwen3-vl-32b-instruct"
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "default_model": "deepseek-chat"
     },
     "openai": {
         "base_url": "https://api.openai.com/v1",
@@ -33,6 +45,7 @@ class PipelineConfig:
     """
     watch_directories: List[str] = field(default_factory=lambda: [os.getcwd()])
     watch_directory: Optional[str] = None
+    clients_directory: Optional[str] = None
     
     allowed_extensions: Tuple[str, ...] = ('.txt', '.json', '.md', '.csv', '.log', '.pdf')
     ignored_extensions: Tuple[str, ...] = ('.tmp', '.part', '.crdownload', '.swp', '.lock')
@@ -40,10 +53,10 @@ class PipelineConfig:
     stability_timeout: int = 30
     stability_poll_interval: float = 0.5
     
-    provider: str = "openrouter"
-    api_key: str = field(default_factory=lambda: os.environ.get("AI_API_KEY", "your-api-key-here"))
-    base_url: str = field(default_factory=lambda: os.environ.get("AI_BASE_URL", "https://openrouter.ai/api/v1"))
-    model_name: str = field(default_factory=lambda: os.environ.get("AI_MODEL", "google/gemini-2.5-flash:free"))
+    provider: str = "native"
+    api_key: str = field(default_factory=lambda: os.environ.get("AI_API_KEY", ""))
+    base_url: str = field(default_factory=lambda: os.environ.get("AI_BASE_URL", ""))
+    model_name: str = field(default_factory=lambda: os.environ.get("AI_MODEL", "Built-in Rules + Local PP-OCR"))
     
     num_workers: int = 2
     max_retries: int = 3
@@ -88,6 +101,8 @@ class PipelineConfig:
                     config.watch_directories = [data["watch_directory"]]
                     config.watch_directory = data["watch_directory"]
 
+                if "clients_directory" in data:
+                    config.clients_directory = data["clients_directory"]
                 if "provider" in data:
                     config.apply_provider_preset(data["provider"])
                 if "api_key" in data:
@@ -113,6 +128,8 @@ class PipelineConfig:
         if os.environ.get("WATCH_DIR"):
             config.watch_directories = [os.environ.get("WATCH_DIR")]
             config.watch_directory = os.environ.get("WATCH_DIR")
+        if os.environ.get("CLIENTS_DIR"):
+            config.clients_directory = os.environ.get("CLIENTS_DIR")
         if os.environ.get("AI_API_KEY"):
             config.api_key = os.environ.get("AI_API_KEY")
         if os.environ.get("AI_PROVIDER"):
@@ -128,6 +145,7 @@ class PipelineConfig:
         """
         return {
             "watch_directories": self.watch_directories,
+            "clients_directory": self.clients_directory,
             "provider": self.provider,
             "model_name": self.model_name,
             "base_url": self.base_url,
