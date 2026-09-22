@@ -84,6 +84,7 @@ exe = EXE(
     exclude_binaries=True,
     name='ScannedDocumentsRenamer',
     icon=os.path.abspath('gui/icon.ico') if os.path.exists('gui/icon.ico') else None,
+    version=os.path.abspath('file_version_info.txt') if os.path.exists('file_version_info.txt') else None,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

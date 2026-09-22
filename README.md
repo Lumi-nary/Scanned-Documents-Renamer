@@ -67,9 +67,17 @@ Gives the file a clean name and moves it to the client's folder!"]
 No programming or setup required! Just run the desktop app:
 
 ### 1. Download & Open
-Download the Windows installer or portable standalone program:
-- 📦 **[Download Windows Setup Installer v2.0.0 (.exe)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Setup_v2.0.0.exe)** (Recommended — creates desktop & start menu shortcuts)
-- 🗂️ **Or run the portable version:** Open `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive.
+Choose your preferred download package:
+- 📦 **[Download Windows Setup Installer (.exe)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Setup_v2.0.0.exe)** (Recommended wizard — creates desktop & start menu shortcuts)
+- 🗜️ **[Download Setup Installer (.zip)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Setup_v2.0.0.zip)** (Use this if your web browser blocks direct `.exe` downloads!)
+- 💼 **[Download Portable Version (.zip)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Portable_v2.0.0.zip)** (No installer needed — extract anywhere and run `ScannedDocumentsRenamer.exe`)
+
+> [!TIP]
+> **Seeing "Windows protected your PC" or a browser "suspicious file" warning?**
+> Because this is a new open-source tool without a corporate commercial certificate, Windows SmartScreen and Chrome Safe Browsing flag it as "unrecognized" by default. The program is 100% safe, verified virus-free, and private:
+> - **In Chrome / Edge**: If it says *"not commonly downloaded"*, click `...` &rarr; **Keep** &rarr; **Keep anyway**.
+> - **In Windows SmartScreen**: Click **"More info"** &rarr; click **"Run anyway"**.
+> - **Or**: Download the **Setup Installer (.zip)** version above, extract it, and run setup!
 
 ### 2. Choose Your Folders
 In the desktop window:

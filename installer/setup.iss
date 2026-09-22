@@ -38,6 +38,16 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 
+; Windows Executable Metadata & Version Information (reduces antivirus false positives)
+VersionInfoVersion=2.0.0.0
+VersionInfoCompany=Lumi-nary
+VersionInfoDescription=Scanned Documents Renamer Setup
+VersionInfoTextVersion=2.0.0
+VersionInfoCopyright=Copyright (c) 2026 Lumi-nary
+VersionInfoProductName=Scanned Documents Renamer
+VersionInfoProductVersion=2.0.0.0
+VersionInfoOriginalFileName=ScannedDocumentsRenamer_Setup_v2.0.0.exe
+
 ; Visual branding & Application Icons
 DisableWelcomePage=no
 SetupIconFile=..\gui\icon.ico
