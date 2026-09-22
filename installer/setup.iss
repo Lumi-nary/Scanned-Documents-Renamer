@@ -51,8 +51,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-; Distribute all files from the compiled PyInstaller bundle
-Source: "..\dist\ScannedDocumentsRenamer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Distribute all files from the compiled PyInstaller bundle (strictly excluding local settings, secrets, and logs)
+Source: "..\dist\ScannedDocumentsRenamer\*"; DestDir: "{app}"; Excludes: "settings.json,*.log,*.tmp,*.bak,.env,.env.*,*.response.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\gui\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\gui\icon.ico"; DestDir: "{app}\gui"; Flags: ignoreversion
 Source: "..\gui\icon.png"; DestDir: "{app}"; Flags: ignoreversion

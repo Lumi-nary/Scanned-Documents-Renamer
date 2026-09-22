@@ -38,6 +38,12 @@ echo.
 goto :END
 
 :RUN_ISCC
+if exist "dist\ScannedDocumentsRenamer\settings.json" (
+    echo [SECURITY] Purging local settings.json from dist directory before packaging...
+    del /f /q "dist\ScannedDocumentsRenamer\settings.json"
+)
+if exist "dist\ScannedDocumentsRenamer\*.log" del /f /q "dist\ScannedDocumentsRenamer\*.log"
+
 echo Found Inno Setup at: "%ISCC_PATH%"
 echo Compiling Setup Installer wizard...
 "%ISCC_PATH%" "installer\setup.iss"

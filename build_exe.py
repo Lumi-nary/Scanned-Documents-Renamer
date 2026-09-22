@@ -96,6 +96,11 @@ def build():
     if os.path.exists(src_settings_example):
         shutil.copyfile(src_settings_example, os.path.join(dist_dir, "settings.example.json"))
 
+    # Ensure local settings or secrets are NEVER packaged in clean distribution
+    dist_settings = os.path.join(dist_dir, "settings.json")
+    if os.path.exists(dist_settings):
+        os.remove(dist_settings)
+
     total_size = get_folder_size(dist_dir)
 
     print("\n" + "=" * 65)
