@@ -46,7 +46,7 @@ if %errorlevel% equ 0 (
     echo =====================================================================
     echo   SETUP INSTALLER GENERATED SUCCESSFULLY!
     echo =====================================================================
-    echo Installer file: dist\installer\ScannedDocumentsRenamer_Setup_v1.0.0.exe
+    echo Installer file: dist\installer\ScannedDocumentsRenamer_Setup_v2.0.0.exe
     echo.
 ) else (
     echo [ERROR] Inno Setup compilation failed.

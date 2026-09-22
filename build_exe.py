@@ -31,15 +31,22 @@ def build():
         print(f"[ERROR] Specification file not found at: {spec_file}")
         sys.exit(1)
 
-    # Clean old build/dist
-    for d in ["build", "dist"]:
-        path = os.path.join(base_dir, d)
-        if os.path.exists(path):
-            print(f"Cleaning previous {d}/ directory...")
-            try:
-                shutil.rmtree(path)
-            except Exception as e:
-                print(f"Notice: Could not completely remove {path}: {e}")
+    # Clean old build/dist app directory
+    build_dir = os.path.join(base_dir, "build")
+    if os.path.exists(build_dir):
+        print("Cleaning previous build/ directory...")
+        try:
+            shutil.rmtree(build_dir)
+        except Exception as e:
+            print(f"Notice: Could not completely remove {build_dir}: {e}")
+
+    app_dist_dir = os.path.join(base_dir, "dist", "ScannedDocumentsRenamer")
+    if os.path.exists(app_dist_dir):
+        print("Cleaning previous dist/ScannedDocumentsRenamer directory...")
+        try:
+            shutil.rmtree(app_dist_dir)
+        except Exception as e:
+            print(f"Notice: Could not completely remove {app_dist_dir}: {e}")
 
     cmd = [
         sys.executable,

@@ -2,7 +2,7 @@
 
 **Point it at your scanner's output folder. It reads every new scan, figures out what document it is, renames it properly, and files it neatly under the right client.**
 
-[![Windows 10 & 11 Ready](https://img.shields.io/badge/Windows-10%20%7C%2011%20Ready-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)
+[![Windows 10 & 11 Ready](https://img.shields.io/badge/Windows-10%20%7C%2011%20Ready-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Setup_v2.0.0.exe)
 [![100% Offline Capable](https://img.shields.io/badge/Privacy-100%25%20Offline%20Capable-28a745?style=flat-square&logo=shield)](docs/pipeline-flow.svg)
 [![73 Unit Tests Passing](https://img.shields.io/badge/Tests-73%2F73%20Passing-brightgreen?style=flat-square&logo=pytest)](tests/)
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0-blue?style=flat-square)](LICENSE)
@@ -68,7 +68,7 @@ No programming or setup required! Just run the desktop app:
 
 ### 1. Download & Open
 Download the Windows installer or portable standalone program:
-- 📦 **[Download Windows Setup Installer v1.0.0 (.exe)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)** (Recommended — creates desktop & start menu shortcuts)
+- 📦 **[Download Windows Setup Installer v2.0.0 (.exe)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/releases/download/v2.0.0/ScannedDocumentsRenamer_Setup_v2.0.0.exe)** (Recommended — creates desktop & start menu shortcuts)
 - 🗂️ **Or run the portable version:** Open `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive.
 
 ### 2. Choose Your Folders

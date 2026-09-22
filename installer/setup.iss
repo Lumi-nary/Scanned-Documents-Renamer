@@ -2,7 +2,7 @@
 ; Produces a dedicated Windows Setup Installer (.exe) with clean installation & uninstallation
 
 #define MyAppName "Scanned Documents Renamer"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "Lumi-nary"
 #define MyAppURL "https://github.com/Lumi-nary/Scanned-Documents-Renamer"
 #define MyAppExeName "ScannedDocumentsRenamer.exe"
