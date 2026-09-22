@@ -59,7 +59,9 @@ Secretary's Certificate 06_26_2025.pdf       # no Doc. No. -> first page date
 OPE-1185.pdf -> 1185.pdf                     # reference-numbered documents
 ```
 
-Client attribution prefers the corporate-officer pattern (`"...being the duly qualified Corporate Secretary of EXAMPLE HOLDINGS CORP."` → `Example Holdings Corp`), falls back to the active client, and normalizes names to Title Case.
+Client attribution prefers the corporate-officer pattern (`"...being the duly qualified Corporate Secretary of EXAMPLE HOLDINGS CORP."` → `Example Holdings Corp`), falls back to the active client (when enabled), and normalizes names to Title Case.
+
+When **Active Client Context** is disabled (via the GUI card dropdown, Settings modal, or CLI flag `--disable-active-client`), unassigned or unrecognized documents default directly to the `Temporary` staging directory instead of inheriting previous clients or creating generic client folders.
 
 ---
 

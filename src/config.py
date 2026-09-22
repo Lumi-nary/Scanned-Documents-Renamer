@@ -65,6 +65,7 @@ class PipelineConfig:
     max_payload_length: int = 4000
     enable_wrapup: bool = False
     update_clients_docx: bool = False
+    enable_active_client: bool = True
     
     def __post_init__(self):
         if self.watch_directory:
@@ -119,6 +120,10 @@ class PipelineConfig:
                     config.enable_wrapup = bool(data["enable_wrapup"])
                 if "update_clients_docx" in data:
                     config.update_clients_docx = bool(data["update_clients_docx"])
+                if "enable_active_client" in data:
+                    config.enable_active_client = bool(data["enable_active_client"])
+                elif "disable_active_client" in data:
+                    config.enable_active_client = not bool(data["disable_active_client"])
 
                 logger.info(f"Loaded configuration settings from {settings_file}")
             except Exception as e:
@@ -136,6 +141,10 @@ class PipelineConfig:
             config.apply_provider_preset(os.environ.get("AI_PROVIDER"))
         if os.environ.get("ENABLE_WRAPUP"):
             config.enable_wrapup = os.environ.get("ENABLE_WRAPUP").lower() in ("true", "1", "yes")
+        if os.environ.get("ENABLE_ACTIVE_CLIENT"):
+            config.enable_active_client = os.environ.get("ENABLE_ACTIVE_CLIENT").lower() in ("true", "1", "yes")
+        elif os.environ.get("DISABLE_ACTIVE_CLIENT"):
+            config.enable_active_client = os.environ.get("DISABLE_ACTIVE_CLIENT").lower() not in ("true", "1", "yes")
             
         return config
 
@@ -153,7 +162,8 @@ class PipelineConfig:
             "num_workers": self.num_workers,
             "stability_timeout": self.stability_timeout,
             "enable_wrapup": self.enable_wrapup,
-            "update_clients_docx": self.update_clients_docx
+            "update_clients_docx": self.update_clients_docx,
+            "enable_active_client": self.enable_active_client
         }
 
     def save(self, settings_file: str = "settings.json") -> None:

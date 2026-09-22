@@ -13,8 +13,23 @@
     processedCount: 0,
     activeClient: null,
     isClientLocked: false,
+    activeClientEnabled: true,
     clientList: [],
-    recentRecords: []
+    recentRecords: [],
+    isDirtySettings: false,
+    originalSettings: null,
+    instructions: {
+      global_instructions: {
+        system_role: '',
+        client_rules: '',
+        formatting_rules: ''
+      },
+      file_types: []
+    },
+    promptPreview: '',
+    instructionsFilter: 'all',
+    instructionsSearch: '',
+    isDirtyInstructions: false
   };
 
   // Provider presets mapping
@@ -110,6 +125,7 @@
     activeClientList: document.getElementById('active-client-list'),
     actionHeaderNewClient: document.getElementById('action-header-new-client'),
     actionHeaderClearClient: document.getElementById('action-header-clear-client'),
+    actionHeaderDisableClient: document.getElementById('action-header-disable-client'),
     btnToggleLockClient: document.getElementById('btn-toggle-lock-client'),
     iconLockState: document.getElementById('icon-lock-state'),
     btnCardScanFolders: document.getElementById('btn-card-scan-folders'),
@@ -118,6 +134,7 @@
 
     settingClientLockBadge: document.getElementById('setting-client-lock-badge'),
     settingActiveClientInput: document.getElementById('setting-active-client-input'),
+    settingEnableActiveClient: document.getElementById('setting-enable-active-client'),
     btnSettingsBrowseClient: document.getElementById('btn-settings-browse-client'),
     btnSettingsToggleLock: document.getElementById('btn-settings-toggle-lock'),
     labelSettingsLock: document.getElementById('label-settings-lock'),
@@ -150,12 +167,56 @@
     settingWrapup: document.getElementById('setting-wrapup'),
     settingDocx: document.getElementById('setting-docx'),
     btnSaveSettings: document.getElementById('btn-save-settings'),
+    settingsForm: document.getElementById('settings-form'),
+    floatingSettingsSave: document.getElementById('floating-settings-save'),
+    btnFloatingSaveSettings: document.getElementById('btn-floating-save-settings'),
+    btnFloatingDiscardSettings: document.getElementById('btn-floating-discard-settings'),
 
     terminalOutput: document.getElementById('terminal-output'),
     chkAutoscroll: document.getElementById('chk-autoscroll'),
     btnClearLogs: document.getElementById('btn-clear-logs'),
 
-    toastContainer: document.getElementById('toast-container')
+    toastContainer: document.getElementById('toast-container'),
+
+    // Instructions Tab Elements
+    badgeTotalRules: document.getElementById('badge-total-rules'),
+    btnAddFileType: document.getElementById('btn-add-file-type'),
+    btnPreviewPrompt: document.getElementById('btn-preview-prompt'),
+    btnResetInstructions: document.getElementById('btn-reset-instructions'),
+    btnSaveInstructions: document.getElementById('btn-save-instructions'),
+    txtSaveInstructions: document.getElementById('txt-save-instructions'),
+    instructionsSearch: document.getElementById('instructions-search'),
+    instructionsCardsList: document.getElementById('instructions-cards-list'),
+    instructionsEmptyState: document.getElementById('instructions-empty-state'),
+    btnToggleGlobalRules: document.getElementById('btn-toggle-global-rules'),
+    globalInstructionsBody: document.getElementById('global-instructions-body'),
+    iconChevronGlobal: document.getElementById('icon-chevron-global'),
+    txtSystemRole: document.getElementById('txt-system-role'),
+    txtClientRules: document.getElementById('txt-client-rules'),
+    txtFormattingRules: document.getElementById('txt-formatting-rules'),
+
+    // Modal Edit Instruction
+    modalEditInstruction: document.getElementById('modal-edit-instruction'),
+    modalRuleTitle: document.getElementById('modal-rule-title'),
+    modalRuleSubtitle: document.getElementById('modal-rule-subtitle'),
+    btnCloseRuleModal: document.getElementById('btn-close-rule-modal'),
+    btnCancelRuleModal: document.getElementById('btn-cancel-rule-modal'),
+    btnSaveRuleModal: document.getElementById('btn-save-rule-modal'),
+    editRuleId: document.getElementById('edit-rule-id'),
+    editRuleName: document.getElementById('edit-rule-name'),
+    editRulePriority: document.getElementById('edit-rule-priority'),
+    editRuleKeywords: document.getElementById('edit-rule-keywords'),
+    editRuleFormat: document.getElementById('edit-rule-format'),
+    editRuleInstructions: document.getElementById('edit-rule-instructions'),
+    editRuleEnabled: document.getElementById('edit-rule-enabled'),
+
+    // Modal Prompt Preview
+    modalPromptPreview: document.getElementById('modal-prompt-preview'),
+    btnClosePromptModal: document.getElementById('btn-close-prompt-modal'),
+    btnDismissPromptModal: document.getElementById('btn-dismiss-prompt-modal'),
+    btnCopyPrompt: document.getElementById('btn-copy-prompt'),
+    txtCopyPrompt: document.getElementById('txt-copy-prompt'),
+    promptPreviewText: document.getElementById('prompt-preview-text')
   };
 
   // Toast helper
@@ -192,6 +253,15 @@
     state.processedCount = status.processed_count || 0;
     state.activeClient = status.active_client || null;
     state.isClientLocked = Boolean(status.is_client_locked);
+    if (status.active_client_enabled !== undefined) {
+      state.activeClientEnabled = Boolean(status.active_client_enabled);
+    } else if (status.enable_active_client !== undefined) {
+      state.activeClientEnabled = Boolean(status.enable_active_client);
+    }
+
+    if (els.settingEnableActiveClient) {
+      els.settingEnableActiveClient.checked = state.activeClientEnabled;
+    }
 
     // Status Pill
     if (state.isRunning) {
@@ -214,8 +284,27 @@
     els.metricQueueCount.textContent = state.queuedCount;
     els.metricProcessedCount.textContent = state.processedCount;
 
-    // Active Client Label
-    if (state.activeClient) {
+    // Active Client Label & Lock State UI Sync
+    if (!state.activeClientEnabled) {
+      els.metricActiveClient.textContent = 'Disabled (Temporary)';
+      els.metricActiveClient.style.color = 'var(--text-muted)';
+      if (els.btnClearClient) els.btnClearClient.style.display = 'none';
+      if (els.cardActiveClient) els.cardActiveClient.classList.remove('locked-state');
+      if (els.clientLockBadge) {
+        els.clientLockBadge.className = 'client-lock-pill disabled';
+        els.clientLockBadge.textContent = 'Disabled';
+        els.clientLockBadge.title = 'Active Client Context is disabled. Unassigned scans will default to Temporary.';
+      }
+      if (els.btnToggleLockClient) {
+        els.btnToggleLockClient.classList.remove('locked');
+        els.btnToggleLockClient.title = 'Active Client Context is disabled. Click to re-enable or choose client.';
+      }
+      if (els.settingClientLockBadge) {
+        els.settingClientLockBadge.className = 'client-lock-pill disabled';
+        els.settingClientLockBadge.textContent = 'Disabled';
+      }
+      if (els.labelSettingsLock) els.labelSettingsLock.textContent = '🔒 Lock';
+    } else if (state.activeClient) {
       els.metricActiveClient.textContent = state.activeClient;
       els.metricActiveClient.style.color = state.isClientLocked ? '#fbbf24' : 'var(--accent-emerald)';
       if (els.btnClearClient) els.btnClearClient.style.display = 'inline-flex';
@@ -225,53 +314,54 @@
       if (els.btnClearClient) els.btnClearClient.style.display = 'none';
     }
 
-    // Client Lock State UI Sync
-    if (state.isClientLocked) {
-      if (els.cardActiveClient) els.cardActiveClient.classList.add('locked-state');
-      if (els.clientLockBadge) {
-        els.clientLockBadge.className = 'client-lock-pill locked';
-        els.clientLockBadge.textContent = '🔒 Locked';
-        els.clientLockBadge.title = `Locked to: ${state.activeClient || 'None'}. All incoming scans will be routed here.`;
+    if (state.activeClientEnabled) {
+      if (state.isClientLocked) {
+        if (els.cardActiveClient) els.cardActiveClient.classList.add('locked-state');
+        if (els.clientLockBadge) {
+          els.clientLockBadge.className = 'client-lock-pill locked';
+          els.clientLockBadge.textContent = '🔒 Locked';
+          els.clientLockBadge.title = `Locked to: ${state.activeClient || 'None'}. All incoming scans will be routed here.`;
+        }
+        if (els.btnToggleLockClient) {
+          els.btnToggleLockClient.classList.add('locked');
+          els.btnToggleLockClient.title = 'Click to unlock client context (Resume auto-detect)';
+          els.btnToggleLockClient.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          `;
+        }
+        if (els.chkLockClient) els.chkLockClient.checked = true;
+        if (els.settingClientLockBadge) {
+          els.settingClientLockBadge.className = 'client-lock-pill locked';
+          els.settingClientLockBadge.textContent = '🔒 Locked';
+        }
+        if (els.labelSettingsLock) els.labelSettingsLock.textContent = '🔓 Unlock';
+      } else {
+        if (els.cardActiveClient) els.cardActiveClient.classList.remove('locked-state');
+        if (els.clientLockBadge) {
+          els.clientLockBadge.className = 'client-lock-pill unlocked';
+          els.clientLockBadge.textContent = 'Auto';
+          els.clientLockBadge.title = 'Unlocked: Automatically detected from documents. Click lock button to lock.';
+        }
+        if (els.btnToggleLockClient) {
+          els.btnToggleLockClient.classList.remove('locked');
+          els.btnToggleLockClient.title = 'Click to lock active client (Force all scans to this client)';
+          els.btnToggleLockClient.innerHTML = `
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+            </svg>
+          `;
+        }
+        if (els.chkLockClient) els.chkLockClient.checked = false;
+        if (els.settingClientLockBadge) {
+          els.settingClientLockBadge.className = 'client-lock-pill unlocked';
+          els.settingClientLockBadge.textContent = 'Auto';
+        }
+        if (els.labelSettingsLock) els.labelSettingsLock.textContent = '🔒 Lock';
       }
-      if (els.btnToggleLockClient) {
-        els.btnToggleLockClient.classList.add('locked');
-        els.btnToggleLockClient.title = 'Click to unlock client context (Resume auto-detect)';
-        els.btnToggleLockClient.innerHTML = `
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
-        `;
-      }
-      if (els.chkLockClient) els.chkLockClient.checked = true;
-      if (els.settingClientLockBadge) {
-        els.settingClientLockBadge.className = 'client-lock-pill locked';
-        els.settingClientLockBadge.textContent = '🔒 Locked';
-      }
-      if (els.labelSettingsLock) els.labelSettingsLock.textContent = '🔓 Unlock';
-    } else {
-      if (els.cardActiveClient) els.cardActiveClient.classList.remove('locked-state');
-      if (els.clientLockBadge) {
-        els.clientLockBadge.className = 'client-lock-pill unlocked';
-        els.clientLockBadge.textContent = 'Auto';
-        els.clientLockBadge.title = 'Unlocked: Automatically detected from documents. Click lock button to lock.';
-      }
-      if (els.btnToggleLockClient) {
-        els.btnToggleLockClient.classList.remove('locked');
-        els.btnToggleLockClient.title = 'Click to lock active client (Force all scans to this client)';
-        els.btnToggleLockClient.innerHTML = `
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-          </svg>
-        `;
-      }
-      if (els.chkLockClient) els.chkLockClient.checked = false;
-      if (els.settingClientLockBadge) {
-        els.settingClientLockBadge.className = 'client-lock-pill unlocked';
-        els.settingClientLockBadge.textContent = 'Auto';
-      }
-      if (els.labelSettingsLock) els.labelSettingsLock.textContent = '🔒 Lock';
     }
 
     if (els.settingActiveClientInput) {
@@ -760,9 +850,10 @@
     const clean = clientName.trim();
 
     // 1. Instant optimistic UI update so the user is never stuck on 'None'
+    state.activeClientEnabled = true;
     state.activeClient = clean;
     state.isClientLocked = Boolean(lock);
-    updateUIState({ active_client: clean, is_client_locked: Boolean(lock), is_running: state.isRunning });
+    updateUIState({ active_client_enabled: true, active_client: clean, is_client_locked: Boolean(lock), is_running: state.isRunning });
     if (els.chkLockClient) {
       els.chkLockClient.checked = Boolean(lock);
     }
@@ -940,17 +1031,39 @@
     });
   }
 
-  // Reset / Clear in dropdown
+  // Reset / Clear in dropdown (Auto mode)
   if (els.actionHeaderClearClient) {
     els.actionHeaderClearClient.addEventListener('click', async (e) => {
       e.stopPropagation();
       closeActiveClientDropdown();
+      state.activeClientEnabled = true;
       state.activeClient = null;
       state.isClientLocked = false;
-      updateUIState({ active_client: null, is_client_locked: false, is_running: state.isRunning });
+      updateUIState({ active_client_enabled: true, active_client: null, is_client_locked: false, is_running: state.isRunning });
       if (window.pywebview && window.pywebview.api) {
+        if (typeof window.pywebview.api.set_active_client_enabled === 'function') {
+          await window.pywebview.api.set_active_client_enabled(true);
+        }
         await window.pywebview.api.reset_active_client();
-        showToast('Active client context cleared (Auto-detect mode).', 'info');
+        showToast('Active client context reset to Auto (Auto-detect mode).', 'info');
+      }
+    });
+  }
+
+  // Disable Active Client Context in dropdown
+  if (els.actionHeaderDisableClient) {
+    els.actionHeaderDisableClient.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      closeActiveClientDropdown();
+      state.activeClientEnabled = false;
+      state.activeClient = null;
+      state.isClientLocked = false;
+      updateUIState({ active_client_enabled: false, active_client: null, is_client_locked: false, is_running: state.isRunning });
+      if (window.pywebview && window.pywebview.api) {
+        if (typeof window.pywebview.api.set_active_client_enabled === 'function') {
+          await window.pywebview.api.set_active_client_enabled(false);
+        }
+        showToast('Active client context disabled. Unassigned scans will default to Temporary.', 'info');
       }
     });
   }
@@ -1118,6 +1231,7 @@
           els.hintModel.textContent = hint;
         }
         showToast(`Model set: ${targetModel}`, 'info');
+        checkSettingsDirty();
       }
     });
   });
@@ -1125,6 +1239,7 @@
   if (els.settingModel) {
     els.settingModel.addEventListener('input', () => {
       syncActiveChip();
+      checkSettingsDirty();
     });
   }
 
@@ -1141,6 +1256,7 @@
       if (els.settingApiKey) {
         els.settingApiKey.focus();
       }
+      checkSettingsDirty();
     });
   }
 
@@ -1152,6 +1268,7 @@
       els.settingModel.value = preset.model;
     }
     updateProviderUI(selected);
+    checkSettingsDirty();
   });
 
   // Action: Browse Watched Directory (Native Windows Folder Picker)
@@ -1162,6 +1279,7 @@
       if (selectedPath) {
         els.settingWatchDir.value = selectedPath;
         showToast(`Scanner Output: ${selectedPath}`, 'info');
+        checkSettingsDirty();
       }
     } catch (err) {
       showToast(`Folder selection error: ${err}`, 'error');
@@ -1188,6 +1306,7 @@
             els.settingClientsDir.value = selectedPath;
           }
           showToast(`Clients Folder: ${selectedPath}`, 'info');
+          checkSettingsDirty();
           // Auto-rescan client folders when a new clients root is selected
           await triggerScanClientFolders(selectedPath);
         }
@@ -1259,11 +1378,87 @@
   if (btnScanFeed) btnScanFeed.addEventListener('click', handleScanWatchedFolder);
   if (btnScanWatchedFolder) btnScanWatchedFolder.addEventListener('click', handleScanWatchedFolder);
 
-  // Action: Save Settings
-  els.btnSaveSettings.addEventListener('click', async () => {
-    if (!window.pywebview || !window.pywebview.api) return;
+  // ============================================================
+  // Settings Dirty Tracking & Floating Save Action Bar
+  // ============================================================
 
-    const watchDir = els.settingWatchDir.value.trim();
+  function snapshotSettings() {
+    state.originalSettings = getCurrentSettingsFormValues();
+    setSettingsDirty(false);
+  }
+
+  function getCurrentSettingsFormValues() {
+    return {
+      watch_directories: [els.settingWatchDir ? els.settingWatchDir.value.trim() : ''],
+      clients_directory: els.settingClientsDir ? els.settingClientsDir.value.trim() : '',
+      provider: els.settingProvider ? els.settingProvider.value : 'native',
+      model_name: els.settingModel ? els.settingModel.value.trim() : '',
+      api_key: els.settingApiKey ? els.settingApiKey.value.trim() : '',
+      num_workers: els.settingWorkers ? (parseInt(els.settingWorkers.value, 10) || 2) : 2,
+      stability_timeout: els.settingStability ? (parseInt(els.settingStability.value, 10) || 30) : 30,
+      enable_wrapup: Boolean(els.settingWrapup && els.settingWrapup.checked),
+      update_clients_docx: Boolean(els.settingDocx && els.settingDocx.checked),
+      enable_active_client: els.settingEnableActiveClient ? Boolean(els.settingEnableActiveClient.checked) : true
+    };
+  }
+
+  function checkSettingsDirty() {
+    if (!state.originalSettings) {
+      snapshotSettings();
+      return;
+    }
+    const cur = getCurrentSettingsFormValues();
+    const orig = state.originalSettings;
+
+    const isDirty = (
+      cur.watch_directories[0] !== (orig.watch_directories[0] || '') ||
+      cur.clients_directory !== (orig.clients_directory || '') ||
+      cur.provider !== (orig.provider || '') ||
+      cur.model_name !== (orig.model_name || '') ||
+      cur.api_key !== (orig.api_key || '') ||
+      cur.num_workers !== (orig.num_workers || 2) ||
+      cur.stability_timeout !== (orig.stability_timeout || 30) ||
+      cur.enable_wrapup !== Boolean(orig.enable_wrapup) ||
+      cur.update_clients_docx !== Boolean(orig.update_clients_docx) ||
+      cur.enable_active_client !== Boolean(orig.enable_active_client)
+    );
+
+    setSettingsDirty(isDirty);
+  }
+
+  function setSettingsDirty(isDirty) {
+    state.isDirtySettings = Boolean(isDirty);
+    if (els.floatingSettingsSave) {
+      if (state.isDirtySettings) {
+        els.floatingSettingsSave.classList.add('visible');
+      } else {
+        els.floatingSettingsSave.classList.remove('visible');
+      }
+    }
+  }
+
+  function discardSettingsChanges() {
+    if (!state.originalSettings) return;
+    const orig = state.originalSettings;
+    if (els.settingWatchDir) els.settingWatchDir.value = (orig.watch_directories && orig.watch_directories[0]) || '';
+    if (els.settingClientsDir) els.settingClientsDir.value = orig.clients_directory || '';
+    if (els.settingProvider) els.settingProvider.value = orig.provider || 'native';
+    if (els.settingModel) els.settingModel.value = orig.model_name || '';
+    if (els.settingApiKey) els.settingApiKey.value = orig.api_key || '';
+    if (els.settingWorkers) els.settingWorkers.value = orig.num_workers || 2;
+    if (els.settingStability) els.settingStability.value = orig.stability_timeout || 30;
+    if (els.settingWrapup) els.settingWrapup.checked = Boolean(orig.enable_wrapup);
+    if (els.settingDocx) els.settingDocx.checked = Boolean(orig.update_clients_docx);
+    if (els.settingEnableActiveClient) els.settingEnableActiveClient.checked = Boolean(orig.enable_active_client);
+
+    updateProviderUI(orig.provider || 'native');
+    setSettingsDirty(false);
+    showToast('Unsaved settings discarded.', 'info');
+  }
+
+  // Common Save Settings Execution
+  async function saveSettingsAction() {
+    const watchDir = els.settingWatchDir ? els.settingWatchDir.value.trim() : '';
     if (!watchDir) {
       showToast('Please specify a scanner output folder.', 'error');
       return;
@@ -1272,18 +1467,27 @@
     const payload = {
       watch_directories: [watchDir],
       clients_directory: els.settingClientsDir ? (els.settingClientsDir.value.trim() || null) : null,
-      provider: els.settingProvider.value,
-      model_name: els.settingModel.value.trim(),
-      api_key: els.settingApiKey.value.trim(),
-      num_workers: parseInt(els.settingWorkers.value, 10) || 2,
-      stability_timeout: parseInt(els.settingStability.value, 10) || 30,
-      enable_wrapup: els.settingWrapup.checked,
-      update_clients_docx: els.settingDocx.checked
+      provider: els.settingProvider ? els.settingProvider.value : 'native',
+      model_name: els.settingModel ? els.settingModel.value.trim() : '',
+      api_key: els.settingApiKey ? els.settingApiKey.value.trim() : '',
+      num_workers: parseInt(els.settingWorkers ? els.settingWorkers.value : 2, 10) || 2,
+      stability_timeout: parseInt(els.settingStability ? els.settingStability.value : 30, 10) || 30,
+      enable_wrapup: Boolean(els.settingWrapup && els.settingWrapup.checked),
+      update_clients_docx: Boolean(els.settingDocx && els.settingDocx.checked),
+      enable_active_client: els.settingEnableActiveClient ? Boolean(els.settingEnableActiveClient.checked) : true
     };
 
+    if (!window.pywebview || !window.pywebview.api) {
+      snapshotSettings();
+      showToast('Settings saved in preview mode!', 'success');
+      return;
+    }
+
     try {
+      showToast('Saving settings...', 'info');
       const res = await window.pywebview.api.save_settings(payload);
       if (res && res.success) {
+        snapshotSettings();
         if (res.client_list) {
           state.clientList = res.client_list;
           state.clientFolders = res.client_list;
@@ -1298,11 +1502,530 @@
         }
       } else {
         showToast('Settings saved.', 'info');
+        snapshotSettings();
       }
     } catch (err) {
       showToast(`Error saving settings: ${err}`, 'error');
     }
+  }
+
+  // Attach Dirty Listeners to Settings Form
+  if (els.settingsForm) {
+    els.settingsForm.addEventListener('input', checkSettingsDirty);
+    els.settingsForm.addEventListener('change', checkSettingsDirty);
+  }
+
+  // Button Listeners (In-card and Floating)
+  if (els.btnSaveSettings) {
+    els.btnSaveSettings.addEventListener('click', saveSettingsAction);
+  }
+  if (els.btnFloatingSaveSettings) {
+    els.btnFloatingSaveSettings.addEventListener('click', saveSettingsAction);
+  }
+  if (els.btnFloatingDiscardSettings) {
+    els.btnFloatingDiscardSettings.addEventListener('click', discardSettingsChanges);
+  }
+
+  // ============================================================
+  // Instructions & Document Types Customization Module
+  // ============================================================
+
+  function setInstructionsDirty(isDirty = true) {
+    state.isDirtyInstructions = isDirty;
+    if (els.txtSaveInstructions) {
+      els.txtSaveInstructions.textContent = isDirty ? 'Save Instructions *' : 'Save Instructions';
+    }
+    if (els.btnSaveInstructions) {
+      if (isDirty) {
+        els.btnSaveInstructions.style.boxShadow = '0 0 16px rgba(16, 185, 129, 0.6)';
+      } else {
+        els.btnSaveInstructions.style.boxShadow = '';
+      }
+    }
+  }
+
+  function renderInstructionsUI() {
+    if (!els.instructionsCardsList || !state.instructions || !Array.isArray(state.instructions.file_types)) return;
+
+    const fileTypes = state.instructions.file_types;
+    const totalCount = fileTypes.length;
+    const activeCount = fileTypes.filter(r => r.enabled).length;
+
+    if (els.badgeTotalRules) {
+      els.badgeTotalRules.textContent = `${activeCount} Active / ${totalCount} Types`;
+    }
+
+    // Populate global rule textareas if not focused
+    if (state.instructions.global_instructions) {
+      const g = state.instructions.global_instructions;
+      if (els.txtSystemRole && document.activeElement !== els.txtSystemRole) {
+        els.txtSystemRole.value = g.system_role || '';
+      }
+      if (els.txtClientRules && document.activeElement !== els.txtClientRules) {
+        els.txtClientRules.value = g.client_rules || '';
+      }
+      if (els.txtFormattingRules && document.activeElement !== els.txtFormattingRules) {
+        els.txtFormattingRules.value = g.formatting_rules || '';
+      }
+    }
+
+    // Filter rules
+    const query = (state.instructionsSearch || '').toLowerCase().trim();
+    const filter = state.instructionsFilter || 'all';
+
+    const filteredRules = fileTypes.filter(rule => {
+      // Status filter
+      if (filter === 'active' && !rule.enabled) return false;
+      if (filter === 'custom' && rule.is_preset) return false;
+      if (filter === 'preset' && !rule.is_preset) return false;
+
+      // Text query
+      if (query) {
+        const inName = (rule.name || '').toLowerCase().includes(query);
+        const inFormat = (rule.naming_format || '').toLowerCase().includes(query);
+        const inInst = (rule.instructions || '').toLowerCase().includes(query);
+        const inKeywords = (rule.match_keywords || []).some(k => k.toLowerCase().includes(query));
+        return inName || inFormat || inInst || inKeywords;
+      }
+
+      return true;
+    });
+
+    if (filteredRules.length === 0) {
+      els.instructionsCardsList.innerHTML = '';
+      if (els.instructionsEmptyState) els.instructionsEmptyState.style.display = 'block';
+      return;
+    }
+
+    if (els.instructionsEmptyState) els.instructionsEmptyState.style.display = 'none';
+
+    // Render cards
+    els.instructionsCardsList.innerHTML = filteredRules.map(rule => {
+      const keywordsHtml = (rule.match_keywords && rule.match_keywords.length > 0)
+        ? rule.match_keywords.map(k => `<span class="keyword-chip">${escapeHtml(k)}</span>`).join('')
+        : '<span style="font-size: 11.5px; color: var(--text-muted); font-style: italic;">None specified</span>';
+
+      return `
+        <div class="instruction-card ${rule.enabled ? '' : 'disabled-rule'}" data-rule-id="${escapeHtml(rule.id)}">
+          <div class="instruction-card-header">
+            <div class="instruction-card-title-group">
+              <span class="rule-priority-badge">#${rule.priority || 1}</span>
+              <span class="instruction-card-name">${escapeHtml(rule.name)}</span>
+              <span class="rule-tag ${rule.is_preset ? 'preset' : 'custom'}">${rule.is_preset ? 'Preset' : 'Custom'}</span>
+            </div>
+            <div class="instruction-card-controls">
+              <label class="rule-switch" title="${rule.enabled ? 'Click to disable rule' : 'Click to enable rule'}">
+                <input type="checkbox" class="chk-rule-toggle" data-rule-id="${escapeHtml(rule.id)}" ${rule.enabled ? 'checked' : ''}>
+                <span class="rule-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="instruction-format-box">
+            <span class="instruction-format-label">Target Format:</span>
+            <code class="instruction-format-code">${escapeHtml(rule.naming_format || 'Standard')}</code>
+          </div>
+
+          <div class="instruction-keywords-row">
+            <span class="instruction-format-label">Trigger Keywords:</span>
+            ${keywordsHtml}
+          </div>
+
+          ${rule.instructions ? `
+            <div class="instruction-snippet-text">${escapeHtml(rule.instructions)}</div>
+          ` : ''}
+
+          <div class="instruction-card-actions">
+            <button type="button" class="btn-icon-text btn-edit-rule" data-rule-id="${escapeHtml(rule.id)}" title="Edit rule details">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+              <span>Edit</span>
+            </button>
+            <button type="button" class="btn-icon-text btn-dup-rule" data-rule-id="${escapeHtml(rule.id)}" title="Duplicate as new custom rule">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Duplicate</span>
+            </button>
+            ${!rule.is_preset ? `
+            <button type="button" class="btn-icon-text danger btn-delete-rule" data-rule-id="${escapeHtml(rule.id)}" title="Delete custom rule">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Delete</span>
+            </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openRuleModal(ruleToEdit = null) {
+    if (!els.modalEditInstruction) return;
+
+    if (ruleToEdit) {
+      state.editingRuleId = ruleToEdit.id;
+      if (els.modalRuleTitle) els.modalRuleTitle.textContent = `Edit Document Type: ${ruleToEdit.name}`;
+      if (els.modalRuleSubtitle) els.modalRuleSubtitle.textContent = ruleToEdit.is_preset ? 'Editing preset default document rule' : 'Editing custom document type rule';
+      if (els.editRuleId) els.editRuleId.value = ruleToEdit.id;
+      if (els.editRuleName) els.editRuleName.value = ruleToEdit.name || '';
+      if (els.editRulePriority) els.editRulePriority.value = ruleToEdit.priority || 1;
+      if (els.editRuleKeywords) els.editRuleKeywords.value = (ruleToEdit.match_keywords || []).join(', ');
+      if (els.editRuleFormat) els.editRuleFormat.value = ruleToEdit.naming_format || '';
+      if (els.editRuleInstructions) els.editRuleInstructions.value = ruleToEdit.instructions || '';
+      if (els.editRuleEnabled) els.editRuleEnabled.checked = Boolean(ruleToEdit.enabled);
+    } else {
+      state.editingRuleId = null;
+      if (els.modalRuleTitle) els.modalRuleTitle.textContent = 'Add New Document Type';
+      if (els.modalRuleSubtitle) els.modalRuleSubtitle.textContent = 'Define recognition keywords, target naming pattern, and extraction instructions';
+      if (els.editRuleId) els.editRuleId.value = '';
+      if (els.editRuleName) els.editRuleName.value = '';
+      if (els.editRulePriority) els.editRulePriority.value = (state.instructions.file_types ? state.instructions.file_types.length + 1 : 1);
+      if (els.editRuleKeywords) els.editRuleKeywords.value = '';
+      if (els.editRuleFormat) els.editRuleFormat.value = '<Document_Title> MM_DD_YYYY.pdf';
+      if (els.editRuleInstructions) els.editRuleInstructions.value = '';
+      if (els.editRuleEnabled) els.editRuleEnabled.checked = true;
+    }
+
+    els.modalEditInstruction.style.display = 'flex';
+    setTimeout(() => {
+      if (els.editRuleName) els.editRuleName.focus();
+    }, 50);
+  }
+
+  function closeRuleModal() {
+    if (els.modalEditInstruction) {
+      els.modalEditInstruction.style.display = 'none';
+      state.editingRuleId = null;
+    }
+  }
+
+  function saveRuleFromModal() {
+    const name = (els.editRuleName.value || '').trim();
+    if (!name) {
+      showToast('Please enter a Document / File Type Name', 'error');
+      if (els.editRuleName) els.editRuleName.focus();
+      return;
+    }
+
+    const format = (els.editRuleFormat.value || '').trim();
+    if (!format) {
+      showToast('Please enter a Target Filename Format Pattern', 'error');
+      if (els.editRuleFormat) els.editRuleFormat.focus();
+      return;
+    }
+
+    const priority = parseInt(els.editRulePriority.value, 10) || 1;
+    const rawKeywords = (els.editRuleKeywords.value || '').split(',');
+    const keywords = rawKeywords.map(k => k.trim()).filter(k => k.length > 0);
+    const instructions = (els.editRuleInstructions.value || '').trim();
+    const enabled = Boolean(els.editRuleEnabled.checked);
+
+    if (state.editingRuleId) {
+      // Updating existing rule
+      const idx = state.instructions.file_types.findIndex(r => r.id === state.editingRuleId);
+      if (idx !== -1) {
+        const existing = state.instructions.file_types[idx];
+        state.instructions.file_types[idx] = {
+          ...existing,
+          name,
+          priority,
+          match_keywords: keywords,
+          naming_format: format,
+          instructions,
+          enabled
+        };
+      }
+    } else {
+      // Adding new custom rule
+      const newId = 'custom_' + Date.now();
+      state.instructions.file_types.push({
+        id: newId,
+        name,
+        is_preset: false,
+        priority,
+        match_keywords: keywords,
+        naming_format: format,
+        instructions,
+        enabled
+      });
+    }
+
+    // Sort by priority
+    state.instructions.file_types.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+
+    setInstructionsDirty(true);
+    renderInstructionsUI();
+    closeRuleModal();
+    showToast(`Document rule "${name}" saved in draft. Click "Save Instructions" to commit changes.`, 'info');
+  }
+
+  // Search & Filter listeners
+  if (els.instructionsSearch) {
+    els.instructionsSearch.addEventListener('input', (e) => {
+      state.instructionsSearch = e.target.value;
+      renderInstructionsUI();
+    });
+  }
+
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.instructionsFilter = pill.getAttribute('data-filter') || 'all';
+      renderInstructionsUI();
+    });
   });
+
+  // Global instructions textarea change listeners
+  [els.txtSystemRole, els.txtClientRules, els.txtFormattingRules].forEach(input => {
+    if (input) {
+      input.addEventListener('input', () => {
+        if (!state.instructions.global_instructions) {
+          state.instructions.global_instructions = {};
+        }
+        if (els.txtSystemRole) state.instructions.global_instructions.system_role = els.txtSystemRole.value;
+        if (els.txtClientRules) state.instructions.global_instructions.client_rules = els.txtClientRules.value;
+        if (els.txtFormattingRules) state.instructions.global_instructions.formatting_rules = els.txtFormattingRules.value;
+        setInstructionsDirty(true);
+      });
+    }
+  });
+
+  // Toggle Global Rules Collapsible
+  if (els.btnToggleGlobalRules) {
+    els.btnToggleGlobalRules.addEventListener('click', () => {
+      const isOpen = els.globalInstructionsBody.style.display !== 'none';
+      els.globalInstructionsBody.style.display = isOpen ? 'none' : 'block';
+      if (els.iconChevronGlobal) {
+        els.iconChevronGlobal.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+      }
+    });
+  }
+
+  // Cards List Action delegation
+  if (els.instructionsCardsList) {
+    els.instructionsCardsList.addEventListener('click', (e) => {
+      // Toggle
+      const toggle = e.target.closest('.chk-rule-toggle');
+      if (toggle) {
+        const ruleId = toggle.getAttribute('data-rule-id');
+        const rule = state.instructions.file_types.find(r => r.id === ruleId);
+        if (rule) {
+          rule.enabled = toggle.checked;
+          setInstructionsDirty(true);
+          renderInstructionsUI();
+        }
+        return;
+      }
+
+      // Edit
+      const editBtn = e.target.closest('.btn-edit-rule');
+      if (editBtn) {
+        const ruleId = editBtn.getAttribute('data-rule-id');
+        const rule = state.instructions.file_types.find(r => r.id === ruleId);
+        if (rule) openRuleModal(rule);
+        return;
+      }
+
+      // Duplicate
+      const dupBtn = e.target.closest('.btn-dup-rule');
+      if (dupBtn) {
+        const ruleId = dupBtn.getAttribute('data-rule-id');
+        const rule = state.instructions.file_types.find(r => r.id === ruleId);
+        if (rule) {
+          const duplicated = {
+            ...rule,
+            id: 'custom_' + Date.now(),
+            name: `${rule.name} (Copy)`,
+            is_preset: false,
+            priority: (rule.priority || 1) + 1
+          };
+          state.instructions.file_types.push(duplicated);
+          state.instructions.file_types.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+          setInstructionsDirty(true);
+          renderInstructionsUI();
+          showToast(`Duplicated "${rule.name}" as custom rule.`, 'info');
+        }
+        return;
+      }
+
+      // Delete
+      const delBtn = e.target.closest('.btn-delete-rule');
+      if (delBtn) {
+        const ruleId = delBtn.getAttribute('data-rule-id');
+        const rule = state.instructions.file_types.find(r => r.id === ruleId);
+        if (rule) {
+          if (confirm(`Delete custom rule "${rule.name}"?`)) {
+            state.instructions.file_types = state.instructions.file_types.filter(r => r.id !== ruleId);
+            setInstructionsDirty(true);
+            renderInstructionsUI();
+            showToast(`Deleted rule "${rule.name}".`, 'info');
+          }
+        }
+        return;
+      }
+    });
+  }
+
+  // Add rule button
+  if (els.btnAddFileType) {
+    els.btnAddFileType.addEventListener('click', () => openRuleModal(null));
+  }
+
+  // Modal actions
+  if (els.btnCloseRuleModal) els.btnCloseRuleModal.addEventListener('click', closeRuleModal);
+  if (els.btnCancelRuleModal) els.btnCancelRuleModal.addEventListener('click', closeRuleModal);
+  if (els.btnSaveRuleModal) els.btnSaveRuleModal.addEventListener('click', saveRuleFromModal);
+
+  // Close modals on Escape key or backdrop click
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (els.modalEditInstruction && els.modalEditInstruction.style.display !== 'none') {
+        closeRuleModal();
+      }
+      if (els.modalPromptPreview && els.modalPromptPreview.style.display !== 'none') {
+        els.modalPromptPreview.style.display = 'none';
+      }
+    }
+  });
+
+  [els.modalEditInstruction, els.modalPromptPreview].forEach(backdrop => {
+    if (backdrop) {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+          backdrop.style.display = 'none';
+          if (backdrop === els.modalEditInstruction) state.editingRuleId = null;
+        }
+      });
+    }
+  });
+
+  // Save Instructions Action
+  if (els.btnSaveInstructions) {
+    els.btnSaveInstructions.addEventListener('click', async () => {
+      if (!window.pywebview || !window.pywebview.api) {
+        showToast('Connecting to desktop backend...', 'info');
+        return;
+      }
+
+      try {
+        showToast('Saving document instructions...', 'info');
+        const res = await window.pywebview.api.save_instructions(state.instructions);
+        if (res && res.success) {
+          if (res.instructions) state.instructions = res.instructions;
+          if (res.prompt_preview) state.promptPreview = res.prompt_preview;
+          setInstructionsDirty(false);
+          renderInstructionsUI();
+          showToast('Document instructions saved and applied to active ingestion!', 'success');
+        } else {
+          showToast(`Failed to save instructions: ${res ? res.error : 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Save error: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Reset Instructions Action
+  if (els.btnResetInstructions) {
+    els.btnResetInstructions.addEventListener('click', async () => {
+      if (!window.pywebview || !window.pywebview.api) return;
+
+      if (!confirm('Are you sure you want to reset all document instructions to preset defaults? Any custom document types will be removed.')) {
+        return;
+      }
+
+      try {
+        showToast('Resetting document instructions...', 'info');
+        const res = await window.pywebview.api.reset_instructions();
+        if (res && res.success) {
+          if (res.instructions) state.instructions = res.instructions;
+          if (res.prompt_preview) state.promptPreview = res.prompt_preview;
+          setInstructionsDirty(false);
+          renderInstructionsUI();
+          showToast('Document instructions restored to preset defaults.', 'info');
+        } else {
+          showToast(`Reset failed: ${res ? res.error : 'Unknown error'}`, 'error');
+        }
+      } catch (err) {
+        showToast(`Reset error: ${err}`, 'error');
+      }
+    });
+  }
+
+  // Prompt Preview Modal Action
+  if (els.btnPreviewPrompt) {
+    els.btnPreviewPrompt.addEventListener('click', async () => {
+      if (window.pywebview && window.pywebview.api) {
+        try {
+          const res = await window.pywebview.api.get_instructions();
+          if (res && res.prompt_preview) {
+            state.promptPreview = res.prompt_preview;
+          }
+        } catch (e) {
+          console.warn('Could not refresh prompt preview:', e);
+        }
+      }
+
+      let preview = state.promptPreview;
+      if (!preview && state.instructions) {
+        const g = state.instructions.global_instructions || {};
+        const activeRules = (state.instructions.file_types || [])
+          .filter(r => r.enabled !== false)
+          .sort((a, b) => (a.priority || 99) - (b.priority || 99))
+          .map((r, idx) => `Rule ${idx + 1} (${r.name}):\n- Match Keywords: ${(r.match_keywords || r.keywords || []).join(', ')}\n- Format: "${r.naming_format || r.format_pattern || ''}"\n- Guidance: ${r.instructions || ''}`)
+          .join('\n\n');
+
+        const parts = [];
+        if (g.system_role) parts.push(g.system_role);
+        if (activeRules) parts.push(`### DOCUMENT TYPE CLASSIFICATION RULES:\n${activeRules}`);
+        if (g.client_rules) parts.push(g.client_rules);
+        if (g.formatting_rules) parts.push(g.formatting_rules);
+        preview = parts.join('\n\n').trim();
+      }
+
+      if (els.promptPreviewText) {
+        els.promptPreviewText.textContent = preview || 'No prompt preview available.';
+      }
+      if (els.modalPromptPreview) {
+        els.modalPromptPreview.style.display = 'flex';
+      }
+    });
+  }
+
+  if (els.btnClosePromptModal) {
+    els.btnClosePromptModal.addEventListener('click', () => {
+      if (els.modalPromptPreview) els.modalPromptPreview.style.display = 'none';
+    });
+  }
+  if (els.btnDismissPromptModal) {
+    els.btnDismissPromptModal.addEventListener('click', () => {
+      if (els.modalPromptPreview) els.modalPromptPreview.style.display = 'none';
+    });
+  }
+
+  if (els.btnCopyPrompt) {
+    els.btnCopyPrompt.addEventListener('click', async () => {
+      const text = (els.promptPreviewText && els.promptPreviewText.textContent) || state.promptPreview || '';
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        if (els.txtCopyPrompt) els.txtCopyPrompt.textContent = 'Copied to Clipboard!';
+        showToast('Prompt copied to clipboard!', 'success');
+        setTimeout(() => {
+          if (els.txtCopyPrompt) els.txtCopyPrompt.textContent = 'Copy Prompt to Clipboard';
+        }, 2500);
+      } catch (err) {
+        showToast('Could not copy to clipboard.', 'error');
+      }
+    });
+  }
 
   // Load Initial Settings & Data from Backend
   async function loadInitialData() {
@@ -1328,7 +2051,11 @@
           els.settingStability.value = s.stability_timeout || 30;
           els.settingWrapup.checked = Boolean(s.enable_wrapup);
           els.settingDocx.checked = Boolean(s.update_clients_docx);
+          if (els.settingEnableActiveClient && s.enable_active_client !== undefined) {
+            els.settingEnableActiveClient.checked = Boolean(s.enable_active_client);
+          }
           updateProviderUI(els.settingProvider.value);
+          snapshotSettings();
         }
 
         if (data.recent_records && Array.isArray(data.recent_records)) {
@@ -1338,11 +2065,18 @@
         if (data.client_list && Array.isArray(data.client_list)) {
           state.clientList = data.client_list;
         }
+
+        if (data.instructions) {
+          state.instructions = data.instructions;
+          state.promptPreview = data.prompt_preview || '';
+          renderInstructionsUI();
+        }
       }
     } catch (err) {
       console.error('Error loading initial data:', err);
     }
   }
+
 
   // Wait for pywebview bridge initialization
   window.addEventListener('pywebviewready', () => {
@@ -1352,6 +2086,46 @@
       message: 'PyWebView bridge connected. Initializing workspace...'
     });
     loadInitialData();
+  });
+
+  // Standalone browser preview fallback (when opened directly in browser or subagent)
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+      if (!window.pywebview && (!state.instructions.file_types || state.instructions.file_types.length === 0)) {
+        try {
+          const res = await fetch('../instructions.json');
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.file_types) {
+              state.instructions = data;
+              renderInstructionsUI();
+            }
+          }
+        } catch (e) {
+          console.debug('Standalone fallback instructions fetch not available:', e);
+        }
+
+        try {
+          const sRes = await fetch('../settings.json');
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            if (sData) {
+              if (els.settingWatchDir && sData.watch_directories) els.settingWatchDir.value = sData.watch_directories[0] || '';
+              if (els.settingClientsDir) els.settingClientsDir.value = sData.clients_directory || '';
+              if (els.settingProvider && sData.provider) els.settingProvider.value = sData.provider;
+              if (els.settingModel && sData.model_name) els.settingModel.value = sData.model_name;
+              if (els.settingWorkers && sData.num_workers) els.settingWorkers.value = sData.num_workers;
+              if (els.settingStability && sData.stability_timeout) els.settingStability.value = sData.stability_timeout;
+              updateProviderUI(els.settingProvider ? els.settingProvider.value : 'native');
+            }
+          }
+        } catch (e) {
+          console.debug('Standalone fallback settings fetch not available:', e);
+        }
+
+        snapshotSettings();
+      }
+    }, 150);
   });
 
   // Close any open client dropdowns when clicking outside

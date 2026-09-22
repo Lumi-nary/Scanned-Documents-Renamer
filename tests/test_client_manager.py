@@ -177,7 +177,7 @@ class TestClientManager(unittest.TestCase):
         manager.reset_active_client()
         self.assertIsNone(manager.get_active_client())
         name6, is_inherited6 = manager.resolve_client_name(None)
-        self.assertEqual(name6, "General Clients")
+        self.assertEqual(name6, "Temporary")
         self.assertFalse(is_inherited6)
 
     def test_route_file_to_client_direct(self):
@@ -453,6 +453,57 @@ I, MARIA SANTOS, of legal age, with address at 123 Corporate Center, Business Di
         daemon.reset_active_client()
         self.assertIsNone(daemon.get_active_client())
         self.assertFalse(daemon.is_client_locked())
+
+    def test_disable_active_client_context(self):
+        manager = ClientManager(self.watch_dir, enable_active_client=False)
+        self.assertFalse(manager.is_active_client_enabled())
+
+        # When disabled, resolving an explicit client returns the formatted name
+        # but DOES NOT save it as sticky active_client
+        name1, is_inh1 = manager.resolve_client_name("GLOBAL GROUP CORPORATION")
+        self.assertEqual(name1, "Global Group Corporation")
+        self.assertFalse(is_inh1)
+        self.assertIsNone(manager.get_active_client())
+
+        # Unassigned document returns "Temporary"
+        name2, is_inh2 = manager.resolve_client_name(None)
+        self.assertEqual(name2, "Temporary")
+        self.assertFalse(is_inh2)
+
+        # Unrecognized document returns "Temporary"
+        name3, is_inh3 = manager.resolve_client_name("Unrecognized")
+        self.assertEqual(name3, "Temporary")
+        self.assertFalse(is_inh3)
+
+        # Re-enabling active client context restores sticky behavior
+        manager.set_active_client_enabled(True)
+        self.assertTrue(manager.is_active_client_enabled())
+        name4, is_inh4 = manager.resolve_client_name("NEXUS MEDIA, INC.")
+        self.assertEqual(name4, "Nexus Media, Inc.")
+        self.assertEqual(manager.get_active_client(), "Nexus Media, Inc.")
+
+        name5, is_inh5 = manager.resolve_client_name(None)
+        self.assertEqual(name5, "Nexus Media, Inc.")
+        self.assertTrue(is_inh5)
+
+    def test_route_file_to_temporary(self):
+        manager = ClientManager(self.watch_dir, update_docx=True)
+
+        src_file = os.path.join(self.watch_dir, "unassigned_receipt.pdf")
+        with open(src_file, "w", encoding="utf-8") as f:
+            f.write("Receipt content without client name")
+
+        dest_path = manager.route_file_to_client(
+            src_file=src_file,
+            client_name="Temporary",
+            target_filename="Receipt 01_01_2024.pdf"
+        )
+
+        self.assertTrue(os.path.exists(dest_path))
+        self.assertIn("Temporary", dest_path)
+        self.assertEqual(os.path.basename(dest_path), "Receipt 01_01_2024.pdf")
+        # Temporary files must NOT create or pollute Clients.docx
+        self.assertFalse(os.path.exists(manager.docx_path))
 
 
 if __name__ == "__main__":

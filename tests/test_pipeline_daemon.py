@@ -106,6 +106,27 @@ class TestPipelineDaemon(unittest.TestCase):
         self.assertIn("Direct Client Corp", discovered)
         self.assertIn("General Clients", discovered)
 
+    def test_daemon_enable_disable_active_client(self):
+        self.assertTrue(self.daemon.is_active_client_enabled())
+        self.daemon.set_active_client("Acme Global")
+        self.assertEqual(self.daemon.get_active_client(), "Acme Global")
+
+        # Disable active client context
+        self.daemon.set_active_client_enabled(False)
+        self.assertFalse(self.daemon.is_active_client_enabled())
+        self.assertIsNone(self.daemon.get_active_client())
+
+        status = self.daemon.get_status()
+        self.assertFalse(status["active_client_enabled"])
+        self.assertFalse(status["enable_active_client"])
+        self.assertIsNone(status["active_client"])
+
+        # Re-enable
+        self.daemon.set_active_client_enabled(True)
+        self.assertTrue(self.daemon.is_active_client_enabled())
+        status2 = self.daemon.get_status()
+        self.assertTrue(status2["active_client_enabled"])
+
 if __name__ == "__main__":
     unittest.main()
 

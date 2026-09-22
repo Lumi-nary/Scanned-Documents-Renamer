@@ -1,0 +1,150 @@
+{
+  "version": "1.0",
+  "global_instructions": {
+    "system_role": "You are an automated document vision & OCR assistant for scanning and classifying files.\nVisually inspect the DOCUMENT IMAGE provided to accurately identify the main Document Title/Header, Subject/Re line, and relevant dates or reference numbers.",
+    "client_rules": "1. Corporate Officer & Secretary Pattern:\n   - The client name is EXCLUSIVELY the corporation whose Officer (Corporate Secretary, Treasurer, President) is certifying the document (e.g. \"Treasurer of ACME MANAGEMENT CORP.\" -> \"Acme Management Corp\", \"being the duly qualified Corporate Secretary of ACME MANAGEMENT CORP.\" -> \"Acme Management Corp\", \"being the Corporate Secretary of GLOBAL GROUP CORPORATION\" -> \"Global Group Corporation\").\n   - Look for phrases such as:\n     * \"Treasurer of [Client Name]\" or \"I am the Treasurer of [Client Name]\"\n     * \"Corporate Secretary of [Client Name]\" or \"Corporate Secretary [Client Name]\"\n     * \"being the duly qualified Corporate Secretary of [Client Name]\"\n     * \"being the Corporate Secretary of [Client Name]\"\n     * \"duly elected and qualified Corporate Secretary of [Client Name]\"\n     * \"incumbent Corporate Secretary [Client Name]\"\n     * \"President of [Client Name]\"\n   - Extract ONLY the Client Name / Corporate Name as the \"client_name\" (e.g. \"Acme Management Corp\", \"Global Group Corporation\", \"Nexus Media, Inc.\", \"Bluestar J3 Corp\").\n   - CRITICAL PROHIBITION - NEVER USE THE BANK OR THIRD PARTY AS CLIENT:\n     * Resolutions frequently authorize transacting with banks (e.g. \"transact with BDO UNIBANK, INC.\", \"BDO Leasing\", \"BDO Rental\", \"BDO Capital\", \"BDO Private Bank\", \"Landbank\", \"Security Bank\", \"Metrobank\").\n     * The bank is a THIRD PARTY the company is transacting with. THE BANK IS NOT THE CLIENT!\n     * NEVER set \"client_name\" to \"BDO Unibank, Inc.\", \"BDO\", or any other bank mentioned in the resolution.\n     * ALWAYS set \"client_name\" to the issuing corporation whose Secretary certified the document (e.g. \"Acme Management Corp\").\n   - CRITICAL PROHIBITION - NEVER HALLUCINATE OR EXTRACT ACTION CLAUSES AS CLIENT:\n     * The client name MUST be a real corporation or business entity name.\n     * NEVER output action clauses or phrases like \"Receive For And On Behalf Of The Corporation\", \"Authorized To Receive\", \"Open And Maintain\", \"Depose And State\"!\n     * ALWAYS output the actual corporation certified (e.g. \"Acme Management Corp\").\n\n2. Acronyms vs. Title Casing:\n   - We CANNOT have all capital letters unless it is deemed initials / acronyms.\n   - Keep true business initials / acronyms in all caps: e.g. \"J3\", \"OPC\", \"LLC\", \"GRM\", \"RCBC\".\n   - Convert standard English and corporate words to Title Case: \"Management\", \"Group\", \"Corporation\", \"Media\", \"Ventures\", \"Development\", \"Holdings\".\n   - Suffix \"Corp\": Format as \"Corp\" (e.g. \"Acme Management Corp\", \"Bluestar J3 Corp\", \"Cascade Ventures, Corp\").\n   - Examples:\n     * \"ACME MANAGEMENT CORP.,\" -> \"Acme Management Corp\"\n     * \"GLOBAL GROUP CORPORATION\" -> \"Global Group Corporation\"\n     * \"BLUESTAR J3 CORP.,\" -> \"Bluestar J3 Corp\"\n     * \"NEXUS MEDIA, INC.\" -> \"Nexus Media, Inc.\"\n     * \"CASCADE VENTURES, CORP\" -> \"Cascade Ventures, Corp\"\n     * \"VERTEX CONSULTANCY, OPC\" -> \"Vertex Consultancy, OPC\"\n     * \"ATLAS PHARMACEUTICALS, INC.\" -> \"Atlas Pharmaceuticals, Inc.\"",
+    "formatting_rules": "Respond ONLY with a single raw JSON object containing \"filename\", \"client_name\", and \"doc_date\" keys.\nEXAMPLE RESPONSES:\n{\"filename\": \"Secretary's Certificate Doc. No. 384.pdf\", \"client_name\": \"Acme Management Corp\", \"doc_date\": \"08/15/2025\"}\n{\"filename\": \"Secretary's Certificate Doc. No. 385.pdf\", \"client_name\": \"Acme Management Corp\", \"doc_date\": \"09/10/2025\"}\n{\"filename\": \"Secretary's Certificate Doc. No. 467.pdf\", \"client_name\": \"Global Group Corporation\", \"doc_date\": \"09/12/2025\"}\n{\"filename\": \"Secretary's Certificate Doc. No. 520.pdf\", \"client_name\": \"Nexus Media, Inc.\", \"doc_date\": \"12/29/2025\"}\n{\"filename\": \"Secretary's Certificate Doc. No. 74.pdf\", \"client_name\": \"Bluestar J3 Corp\", \"doc_date\": \"03/28/2025\"}\n{\"filename\": \"Secretary's Certificate 05_12_2025.pdf\", \"client_name\": \"Apex Ventures, Inc.\", \"doc_date\": \"05/12/2025\"}\n{\"filename\": \"20220129.pdf\", \"client_name\": \"Sunnyvale Community Homeowners' Association\", \"doc_date\": \"02/24/2022\"}\n{\"filename\": \"1185.pdf\", \"client_name\": \"Sunnyvale Community Homeowners' Association\", \"doc_date\": \"09/10/2024\"}\n{\"filename\": \"Liquidation of Deposit for Out-of-Pocket Expenses 12_09_2020.pdf\", \"client_name\": \"Horizon Renewable Energy Corporation\", \"doc_date\": \"12/09/2020\"}\n{\"filename\": \"Retainer Services Proposal 09_22_2017.pdf\", \"client_name\": \"Beacon Homes Development Corporation\", \"doc_date\": \"09/22/2017\"}\n{\"filename\": \"20220540.pdf\", \"client_name\": \"Beacon Homes Development Corporation\", \"doc_date\": \"07/08/2022\"}\n{\"filename\": \"Transmittal Sheet 01_08_2024.pdf\", \"client_name\": \"Zenith Realty Development Corp.\", \"doc_date\": \"01/08/2024\"}\n{\"filename\": \"Certificate of Incorporation 2025030195697-02.pdf\", \"client_name\": \"Vertex Consultancy, OPC\", \"doc_date\": \"03/28/2025\"}\n{\"filename\": \"Certificate of Registration 041RC20250000005534.pdf\", \"client_name\": \"Atlas Pharmaceuticals, Inc.\", \"doc_date\": \"10/20/2025\"}\n{\"filename\": \"Authority to Print 041RC20250000005534.pdf\", \"client_name\": \"Atlas Pharmaceuticals, Inc.\", \"doc_date\": \"10/20/2025\"}\n{\"filename\": \"Application for Registration 682-974-124-00000.pdf\", \"client_name\": \"Atlas Pharmaceuticals, Inc.\", \"doc_date\": \"10/20/2025\"}\n{\"filename\": \"Monthly Documentary Stamp Tax Declaration Return 08_2025.pdf\", \"client_name\": \"Atlas Pharmaceuticals, Inc.\", \"doc_date\": \"08/2025\"}\n{\"filename\": \"Certificate of Incorporation 2025060206219-60.pdf\", \"client_name\": \"Summit Trade Distribution, Inc.\", \"doc_date\": null}\n{\"filename\": \"Unrecognized.pdf\", \"client_name\": null, \"doc_date\": null}"
+  },
+  "file_types": [
+    {
+      "id": "liquidation_of_deposit",
+      "name": "Liquidation of Deposit",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 1,
+      "match_keywords": [
+        "Liquidation of Deposit",
+        "Accounting of Deposit"
+      ],
+      "naming_format": "Liquidation of Deposit for Out-of-Pocket Expenses MM_DD_YYYY.pdf",
+      "instructions": "- Check if header/title or Subject/Re line contains \"Liquidation of Deposit\" or \"Accounting of Deposit\".\n- CRITICAL: \"Liquidation of Deposit\" takes HIGHER PRIORITY over Rule 2 (Statement of Account / OPE). Do NOT classify \"Liquidation of Deposit\" under Statement of Account / OPE, and do NOT strip the document title to numbers-only!\n- Format: \"Liquidation of Deposit for Out-of-Pocket Expenses MM_DD_YYYY.pdf\" (e.g. \"Liquidation of Deposit for Out-of-Pocket Expenses 12_09_2020.pdf\")."
+    },
+    {
+      "id": "statement_of_account",
+      "name": "Statement of Account / SOA / Out-of-Pocket Expenses (OPE)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 2,
+      "match_keywords": [
+        "Statement of Account",
+        "SOA",
+        "Out-of-Pocket Expenses",
+        "OPE"
+      ],
+      "naming_format": "<NUMBERS>.pdf (e.g. 13656.pdf, 20220129.pdf)",
+      "instructions": "- Check if the main header/title (especially on Page 1) contains \"Statement of Account\", \"SOA\", or standalone \"Out-of-Pocket Expenses\" / \"OPE\" (excluding \"Liquidation of Deposit\"). This rule ALWAYS takes top priority over attached inner pages (e.g. \"Summary of Services Rendered\").\n- Look for Statement of Account / SOA number, 5-digit statement numbers, or OPE reference number (e.g. \"No. 13656\", \"13656\", \"No. 2022-0129\", \"No. OPE-1185\", \"OPE-1185\", \"SOA-2022-0540\", etc.).\n- Extract ONLY the numerical digits of the SOA, 5-digit statement number, or OPE number (e.g. \"No. 13656\" -> \"13656.pdf\", \"No. 2022-0129\" -> \"20220129.pdf\", \"OPE-1185\" -> \"1185.pdf\").\n- CRITICAL: When the document shows \"No. 13656\" or any 5-digit/4-digit number at the top or bottom of a Statement of Account, extract those digits directly to rename the file (e.g. \"13656.pdf\").\n- CRITICAL: SOA numbers often start with a year prefix followed by a hyphen or space (e.g. \"2022-0129\", \"2022-0540\"). This is a Statement Reference Number (\"20220129\"), NOT a date! Do NOT mistake \"2022-0129\" for a date, and do NOT use the document date (e.g. \"February 24, 2022\") to rename Statement of Account files.\n- HANDWRITING & PEN INSTRUCTIONS: Carefully read BOTH printed numbers AND any pen-written/handwritten digits next to it (e.g., if \"2022-\" is printed and \"0540\" is written by pen next to it, the full number is \"20220540\"). Do NOT ignore handwritten numbers.\n- STRICT RULE: STOP renaming SOA files with the text \"Statement of Account\" or document dates. The filename MUST BE JUST NUMBERS: \"<NUMBERS>.pdf\" (e.g. \"13656.pdf\", \"20220129.pdf\", \"1185.pdf\", or \"20220540.pdf\").\n- IMPORTANT: DO NOT include words like \"Statement of Account\", \"SOA\", \"Out-of-Pocket Expenses\", or prefix letters like \"OPE-\" in the filename under any circumstances for SOA/OPE files. Output numerical digits ONLY."
+    },
+    {
+      "id": "transmittal_sheet",
+      "name": "Transmittal Sheet",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 3,
+      "match_keywords": [
+        "Transmittal Sheet"
+      ],
+      "naming_format": "Transmittal Sheet MM_DD_YYYY.pdf",
+      "instructions": "- ONLY classify as Transmittal Sheet if the document explicitly has \"Transmittal Sheet\" written in its title/header.\n- Read the primary transmittal date in numerical format MM_DD_YYYY (e.g. \"January 8, 2024\" -> \"01_08_2024\").\n- Format: \"Transmittal Sheet MM_DD_YYYY.pdf\" (e.g. \"Transmittal Sheet 01_08_2024.pdf\")."
+    },
+    {
+      "id": "summary_of_services",
+      "name": "Summary of Services / Services Rendered",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 4,
+      "match_keywords": [
+        "Summary of Services Rendered",
+        "Summary of Services",
+        "Services Rendered"
+      ],
+      "naming_format": "Summary of Services <Period>.pdf",
+      "instructions": "- Check if header/title contains \"Summary of Services Rendered\", \"Summary of Services\", or \"Services Rendered\".\n- Read the date range or period visually (e.g. \"May to August 2018\", \"February to June 2019\", \"October 2022 to March 2023\").\n- MUST format filename strictly as: \"Summary of Services <Period>.pdf\" (e.g. \"Summary of Services May to August 2018.pdf\", \"Summary of Services February to June 2019.pdf\").\n- STRICT RULE: Do NOT include subject prefix words like \"Litigation -\", \"Retainer -\", client names, or any extra text between \"Summary of Services\" and the period! Output strictly \"Summary of Services <Period>.pdf\" (e.g. \"Summary of Services May to August 2018.pdf\", NOT \"Summary of Services Litigation - May to August 2018.pdf\").\n- Do NOT use handwritten dates (e.g. \"9-17-18\") when a period range like \"May to August 2018\" is printed on the document."
+    },
+    {
+      "id": "corporate_certificates",
+      "name": "Corporate Certificates (Secretary's Certificate, Doc. No., Notarial)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 5,
+      "match_keywords": [
+        "Secretary's Certificate",
+        "Certification of Capital Investment",
+        "Treasurer's Certificate"
+      ],
+      "naming_format": "<Exact_Certificate_Title> Doc. No. <Doc_No>.pdf",
+      "instructions": "- Check the document title/header on Page 1 (e.g. \"Secretary's Certificate\", \"Certification of Capital Investment\", \"Treasurer's Certificate\").\n- Check the notarial acknowledgment section (which may appear on Page 1 or on the LAST / signature page, and in any zoomed-in close-up crop) for \"Doc. No:\" / \"Doc. No.:\".\n- CRITICAL HANDWRITING & DIGIT DISCRIMINATION INSTRUCTIONS:\n  * Carefully inspect the pen-written / handwritten number next to \"Doc. No:\" / \"Doc. No.:\" on the signature page or zoomed notary crop.\n  * Distinguish each handwritten digit with extreme care based on its stroke anatomy (4 vs 7/9, 5 vs 0/8/9, etc.).\n- If \"Doc. No:\" with a document number is found, ALWAYS format the filename strictly using the EXACT document title as: \"<Exact_Certificate_Title> Doc. No. <Doc_No>.pdf\"\n  (e.g. \"Secretary's Certificate Doc. No. 384.pdf\", \"Certification of Capital Investment Doc. No. 320.pdf\").\n- If NO Doc. No. is found, use the Document Title followed by the date found on the first page in MM_DD_YYYY format (e.g. \"Certification of Capital Investment 08_18_2025.pdf\").\n- EXEMPTION TO 1-PAGE RULE: Notarized Corporate Certificates are explicitly EXEMPT from the hard 1-page restriction specifically for extracting \"Doc. No.\" and notarial acknowledgment details that appear on the last / signature page."
+    },
+    {
+      "id": "statutory_certificates",
+      "name": "Registration Documents & Authority (SEC, BIR Form 2303, ATP, BIR 1903)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 6,
+      "match_keywords": [
+        "Certificate of Incorporation",
+        "Certificate of Registration",
+        "Authority to Print",
+        "Application for Registration",
+        "BIR Form 1903",
+        "BIR Form 2303",
+        "BIR Form 1906"
+      ],
+      "naming_format": "Certificate of Incorporation <REG_NO>.pdf / Certificate of Registration <OCN>.pdf / Application for Registration <TIN>.pdf",
+      "instructions": "- For \"Certificate of Incorporation\":\n  * Look for \"COMPANY REG. NO.\" or SEC Registration Number on Page 1 (e.g. \"COMPANY REG. NO.: 2025030195697-02\").\n  * ALWAYS format filename as: \"Certificate of Incorporation <COMPANY_REG_NO>.pdf\".\n- For \"Certificate of Registration\" (BIR Form 2303):\n  * Look for the \"OCN\" (Order Confirmation Number) on Page 1.\n  * ALWAYS format filename as: \"Certificate of Registration <OCN_NUMBER>.pdf\".\n- For \"Authority to Print\" / \"ATP\" (BIR Form 1906):\n  * Look for the \"OCN\" on Page 1. Format as \"Authority to Print <OCN_NUMBER>.pdf\".\n- For \"Application for Registration\" (BIR Form 1903, 1901, etc.):\n  * Look for the \"TIN\" (Taxpayer Identification Number) at the top box or in Part I of Page 1.\n  * Filename MUST be strictly: \"Application for Registration <TIN>.pdf\".\n  * Client name MUST be strictly just the Registered/Trade Business Name.\n- STRICT CRITICAL RULE: ONLY use registration number, OCN, TIN, or date from the FIRST PAGE."
+    },
+    {
+      "id": "tax_declarations",
+      "name": "Tax Returns & Declarations (Doc Stamp BIR 2000, 2000-OT)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 7,
+      "match_keywords": [
+        "Monthly Documentary Stamp Tax Declaration Return",
+        "Declaration/Return",
+        "Declaration Return"
+      ],
+      "naming_format": "<Document_Title> MM_YYYY.pdf",
+      "instructions": "- For titles with slashes like \"Declaration/Return\" (e.g. \"Monthly Documentary Stamp Tax Declaration/Return\", BIR Form 2000, 2000-OT):\n  * NEVER use slashes \"/\" in filenames. Replace slashes with a space so it is \"Declaration Return\".\n  * Format: \"<Document_Title> MM_YYYY.pdf\" or \"<Document_Title> MM_DD_YYYY.pdf\" (e.g. \"Monthly Documentary Stamp Tax Declaration Return 08_2025.pdf\")."
+    },
+    {
+      "id": "subject_re_documents",
+      "name": "Documents with Subject or 'Re:' Line (Proposals, Letters)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 8,
+      "match_keywords": [
+        "Re:",
+        "Re :",
+        "Subject:"
+      ],
+      "naming_format": "<Subject_Title> MM_DD_YYYY.pdf",
+      "instructions": "- Locate the \"Re:\" or Subject line on the document image (e.g. \"Re : Retainer Services Proposal\").\n- Extract the main title, ignoring \"Re:\" or \"Re :\" (e.g. \"Retainer Services Proposal\").\n- Read the document date and convert it to numerical format MM_DD_YYYY (e.g., \"September 22, 2017\" -> \"09_22_2017\").\n- Format MUST use a space, NOT a trailing underscore after the title: \"<Subject_Title> MM_DD_YYYY.pdf\" (e.g. \"Retainer Services Proposal 09_22_2017.pdf\")."
+    },
+    {
+      "id": "other_documents",
+      "name": "Other Standard Documents (Invoices, Receipts, Contracts, Reports)",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 9,
+      "match_keywords": [
+        "Invoice",
+        "Receipt",
+        "Contract",
+        "Agreement",
+        "Report"
+      ],
+      "naming_format": "<Document_Title> MM_DD_YYYY.pdf",
+      "instructions": "- Read actual title/header + numerical date MM_DD_YYYY.\n- Format with spaces, no underscores between Title and Date: \"<Document_Title> MM_DD_YYYY.pdf\"."
+    },
+    {
+      "id": "unrecognized_documents",
+      "name": "Unrecognized / Untitled / Unidentified Documents",
+      "is_preset": true,
+      "enabled": true,
+      "priority": 10,
+      "match_keywords": [],
+      "naming_format": "Unrecognized.pdf",
+      "instructions": "- If the scanned document has NO clear document title/header, or is an arbitrary table/form/list, sign-in sheet, attendance log, roster, draft, attachment, or unidentified document:\n- CRITICAL: DO NOT hallucinate, guess, or invent document titles or client names.\n- ALWAYS name the file strictly: \"Unrecognized.pdf\".\n- Set \"client_name\": null (the pipeline will automatically route it to the active client folder).\n- Set \"doc_date\": null (or the visible document date formatted as MM/DD/YYYY if present)."
+    }
+  ]
+}

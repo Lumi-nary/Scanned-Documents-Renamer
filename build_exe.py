@@ -80,6 +80,15 @@ def build():
     if os.path.exists(src_png):
         shutil.copyfile(src_png, os.path.join(dist_dir, "icon.png"))
 
+    # Copy template config & instructions to distribution root for portable operation
+    src_instructions = os.path.join(base_dir, "instructions.json")
+    if os.path.exists(src_instructions):
+        shutil.copyfile(src_instructions, os.path.join(dist_dir, "instructions.json"))
+
+    src_settings_example = os.path.join(base_dir, "settings.example.json")
+    if os.path.exists(src_settings_example):
+        shutil.copyfile(src_settings_example, os.path.join(dist_dir, "settings.example.json"))
+
     total_size = get_folder_size(dist_dir)
 
     print("\n" + "=" * 65)

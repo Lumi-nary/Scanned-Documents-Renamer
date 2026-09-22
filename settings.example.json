@@ -6,5 +6,6 @@
   "model_name": "Built-in Rules + Local PP-OCR",
   "api_key": "",
   "num_workers": 2,
-  "stability_timeout": 30
+  "stability_timeout": 30,
+  "enable_active_client": true
 }

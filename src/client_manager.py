@@ -383,11 +383,20 @@ class ClientManager:
     Manages grouping files by Client Name, moving them to client directories outside Temporary,
     calculating date ranges, and updating Clients.docx.
     """
-    def __init__(self, base_watch_dir: str, clients_dir: Optional[str] = None, update_docx: bool = False):
+    def __init__(
+        self,
+        base_watch_dir: str,
+        clients_dir: Optional[str] = None,
+        update_docx: bool = False,
+        enable_active_client: bool = True,
+        default_client: str = "Temporary"
+    ):
         self._lock = threading.Lock()
         self.active_client: Optional[str] = None
         self.is_client_locked: bool = False
         self.update_docx = update_docx
+        self.enable_active_client = bool(enable_active_client)
+        self.default_client = default_client
         self.set_base_directory(base_watch_dir, clients_dir=clients_dir)
 
     def set_base_directory(self, base_watch_dir: str, clients_dir: Optional[str] = None) -> None:
@@ -501,19 +510,41 @@ class ClientManager:
 
         return sorted(list(discovered_clients), key=lambda s: s.lower())
 
-    def resolve_client_name(self, extracted_name: Optional[str]) -> Tuple[str, bool]:
+    def is_active_client_enabled(self) -> bool:
+        with self._lock:
+            return self.enable_active_client
+
+    def set_active_client_enabled(self, enabled: bool) -> None:
+        with self._lock:
+            self.enable_active_client = bool(enabled)
+            if not self.enable_active_client:
+                self.active_client = None
+                self.is_client_locked = False
+
+    def resolve_client_name(self, extracted_name: Optional[str], default_fallback: Optional[str] = None) -> Tuple[str, bool]:
         """
         Resolves client name using extracted metadata or carries over previous active client.
+        If active client context is disabled, does not carry over active client and defaults to Temporary.
         If active client is locked, unconditionally returns the locked active client.
         Returns (client_name, is_inherited).
         """
         with self._lock:
+            fallback = default_fallback or self.default_client or "Temporary"
+
+            # If active client context is explicitly disabled:
+            if not self.enable_active_client:
+                clean_name = str(extracted_name).strip() if extracted_name else ""
+                if clean_name and clean_name.lower() not in ("general clients", "temporary", "temp", "none", "null", "unrecognized", ""):
+                    formatted = format_client_name(clean_name)
+                    return formatted, False
+                return fallback, False
+
             # If client context is explicitly locked, strictly route to the locked client
             if self.is_client_locked and self.active_client:
                 return self.active_client, True
 
             clean_name = str(extracted_name).strip() if extracted_name else ""
-            if clean_name and clean_name.lower() not in ("general clients", "none", "null", "unrecognized", ""):
+            if clean_name and clean_name.lower() not in ("general clients", "temporary", "temp", "none", "null", "unrecognized", ""):
                 formatted = format_client_name(clean_name)
                 self.active_client = formatted
                 return formatted, False
@@ -522,23 +553,29 @@ class ClientManager:
             if self.active_client:
                 return self.active_client, True
 
-            return "General Clients", False
+            return fallback, False
 
     def set_active_client(self, client_name: Optional[str]) -> None:
         with self._lock:
             clean = str(client_name).strip() if client_name else ""
             if not clean or clean.lower() in ("none", "none (auto-detect)", "auto", "auto-detect", "null"):
                 self.active_client = None
+            elif clean.lower() in ("disabled", "off"):
+                self.enable_active_client = False
+                self.active_client = None
+                self.is_client_locked = False
             else:
+                self.enable_active_client = True
                 self.active_client = format_client_name(clean)
 
     def set_and_lock_client(self, client_name: Optional[str], locked: bool = True) -> None:
         with self._lock:
             clean = str(client_name).strip() if client_name else ""
-            if not clean or clean.lower() in ("none", "none (auto-detect)", "auto", "auto-detect", "null"):
+            if not clean or clean.lower() in ("none", "none (auto-detect)", "auto", "auto-detect", "null", "disabled"):
                 self.active_client = None
                 self.is_client_locked = False
             else:
+                self.enable_active_client = True
                 self.active_client = format_client_name(clean)
                 self.is_client_locked = bool(locked)
 
@@ -617,17 +654,27 @@ class ClientManager:
         resolving any filename collisions and updating Clients.docx date range.
         Returns the final destination file path.
         """
-        client_name = format_client_name(client_name)
-
-        # Locate existing client folder across categories or default to root_dir/<client_name>
-        client_dir = self.find_client_directory(client_name)
-        if not client_dir:
-            client_dir = os.path.join(self.root_dir, client_name)
+        if client_name.lower() in ("temporary", "temp"):
+            if self.temp_dir and os.path.basename(self.temp_dir).lower() in ("temporary", "temp"):
+                client_dir = self.temp_dir
+            else:
+                client_dir = os.path.join(self.root_dir, "Temporary")
+            formatted_name = "Temporary"
+        else:
+            formatted_name = format_client_name(client_name)
+            # Locate existing client folder across categories or default to root_dir/<client_name>
+            client_dir = self.find_client_directory(formatted_name)
+            if not client_dir:
+                client_dir = os.path.join(self.root_dir, formatted_name)
 
         os.makedirs(client_dir, exist_ok=True)
 
         filename = target_filename or os.path.basename(src_file)
         final_name, dest_path = resolve_filename_collision(client_dir, filename, src_file)
+
+        # Avoid redundant move if destination is the exact same path
+        if os.path.abspath(src_file) == os.path.abspath(dest_path):
+            return dest_path
 
         # Move the file with retry for transient Windows file locks
         moved = False
@@ -642,10 +689,10 @@ class ClientManager:
         if not moved:
             shutil.move(src_file, dest_path)
 
-        logger.info(f"[Direct Routing] Successfully routed '{os.path.basename(src_file)}' -> '{client_name}/{final_name}'")
+        logger.info(f"[Direct Routing] Successfully routed '{os.path.basename(src_file)}' -> '{formatted_name}/{final_name}'")
 
-        # Update Clients.docx only if explicitly enabled
-        if self.update_docx:
+        # Update Clients.docx only if explicitly enabled and not Temporary
+        if self.update_docx and formatted_name.lower() not in ("temporary", "temp", "general clients"):
             doc_dates: List[datetime] = []
             if os.path.exists(client_dir):
                 for existing_file in os.listdir(client_dir):
@@ -662,9 +709,9 @@ class ClientManager:
 
             date_range_str = calculate_date_range_str(doc_dates)
             try:
-                update_clients_docx(self.docx_path, client_name, date_range_str)
+                update_clients_docx(self.docx_path, formatted_name, date_range_str)
             except Exception as e:
-                logger.error(f"Error updating Clients.docx for '{client_name}': {e}")
+                logger.error(f"Error updating Clients.docx for '{formatted_name}': {e}")
 
         return dest_path
 
@@ -708,11 +755,15 @@ class ClientManager:
             if not c_name and record.get("file_path"):
                 c_name = extract_client_name_from_pdf(record["file_path"])
             c_name = format_client_name(c_name)
+            if c_name.lower() in ("temporary", "temp"):
+                continue
             client_groups.setdefault(c_name, []).append(record)
 
         summary_results = []
 
         for client_name, records in client_groups.items():
+            if client_name.lower() in ("temporary", "temp"):
+                continue
             client_dir = os.path.join(self.root_dir, client_name)
             os.makedirs(client_dir, exist_ok=True)
 

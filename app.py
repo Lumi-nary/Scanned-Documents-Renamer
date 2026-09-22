@@ -54,13 +54,16 @@ class DesktopBridgeAPI:
 
     def get_initial_data(self) -> Dict[str, Any]:
         """
-        Supplies the GUI frontend with initial status, settings, and recent documents.
+        Supplies the GUI frontend with initial status, settings, recent documents, and instructions.
         """
+        inst_data = self._daemon.get_instructions_data()
         return {
             "status": self._daemon.get_status(),
             "settings": self._daemon.config.to_dict(),
             "recent_records": self._daemon.get_recent_records(50),
-            "client_list": self.get_client_list()
+            "client_list": self.get_client_list(),
+            "instructions": inst_data.get("instructions"),
+            "prompt_preview": inst_data.get("prompt_preview")
         }
 
     def browse_folder(self, folder_type: str = "watch") -> Optional[str]:
@@ -175,6 +178,9 @@ class DesktopBridgeAPI:
                 cfg.enable_wrapup = bool(settings_dict["enable_wrapup"])
             if "update_clients_docx" in settings_dict:
                 cfg.update_clients_docx = bool(settings_dict["update_clients_docx"])
+            if "enable_active_client" in settings_dict:
+                cfg.enable_active_client = bool(settings_dict["enable_active_client"])
+                self._daemon.set_active_client_enabled(cfg.enable_active_client)
 
             # Persist to settings.json
             cfg.save(self._settings_file)
@@ -238,6 +244,24 @@ class DesktopBridgeAPI:
             "status": self._daemon.get_status()
         }
 
+    def set_active_client_enabled(self, enabled: bool) -> Dict[str, Any]:
+        """
+        Enables or disables active client context memory. When disabled, unassigned scans default to Temporary.
+        """
+        self._daemon.set_active_client_enabled(enabled)
+        self._daemon.config.enable_active_client = bool(enabled)
+        try:
+            self._daemon.config.save(self._settings_file)
+        except Exception:
+            pass
+        return {
+            "success": True,
+            "active_client_enabled": self._daemon.is_active_client_enabled(),
+            "active_client": self._daemon.get_active_client(),
+            "is_locked": self._daemon.is_client_locked(),
+            "status": self._daemon.get_status()
+        }
+
     def set_client_locked(self, locked: bool) -> Dict[str, Any]:
         """
         Toggles active client lock.
@@ -249,6 +273,45 @@ class DesktopBridgeAPI:
             "is_locked": self._daemon.is_client_locked(),
             "status": self._daemon.get_status()
         }
+
+    def get_instructions(self) -> Dict[str, Any]:
+        """
+        Retrieves current customizable instructions data and compiled system prompt preview.
+        """
+        return {
+            "success": True,
+            **self._daemon.get_instructions_data()
+        }
+
+    def save_instructions(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Saves updated file type instructions and global instructions to instructions.json.
+        """
+        try:
+            updated_data = self._daemon.update_instructions(payload)
+            logger.info("Custom document instructions saved successfully via DesktopBridgeAPI.")
+            return {
+                "success": True,
+                **updated_data
+            }
+        except Exception as e:
+            logger.error(f"Failed to save instructions: {e}")
+            return {"success": False, "error": str(e)}
+
+    def reset_instructions(self) -> Dict[str, Any]:
+        """
+        Resets instructions to preset defaults.
+        """
+        try:
+            reset_data = self._daemon.reset_instructions()
+            logger.info("Document instructions reset to preset defaults via DesktopBridgeAPI.")
+            return {
+                "success": True,
+                **reset_data
+            }
+        except Exception as e:
+            logger.error(f"Failed to reset instructions: {e}")
+            return {"success": False, "error": str(e)}
 
     def set_and_lock_client(self, client_name: str, locked: bool = True) -> Dict[str, Any]:
         """
@@ -341,6 +404,7 @@ class DesktopBridgeAPI:
         return {
             "active_client": self._daemon.get_active_client(),
             "is_locked": self._daemon.is_client_locked(),
+            "active_client_enabled": self._daemon.is_active_client_enabled(),
             "client_list": self.get_client_list()
         }
 
@@ -536,6 +600,39 @@ def get_user_config_path() -> str:
         return os.path.join(appdata_dir, "settings.json")
 
 
+def get_user_instructions_path() -> str:
+    """
+    Determines persistent location for instructions.json.
+    Prefers executable directory (portable mode), falls back to AppData if installed in read-only folder.
+    """
+    if not getattr(sys, "frozen", False):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_dir, "instructions.json")
+
+    exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+    exe_instructions = os.path.join(exe_dir, "instructions.json")
+
+    # If instructions.json already exists next to executable, use it
+    if os.path.exists(exe_instructions):
+        return exe_instructions
+
+    # Test if exe directory is writable (e.g. portable zip unpack)
+    try:
+        test_file = os.path.join(exe_dir, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("ok")
+        os.remove(test_file)
+        return exe_instructions
+    except (PermissionError, OSError):
+        # Installed in Program Files -> persist in %LOCALAPPDATA%
+        appdata_dir = os.path.join(
+            os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+            "ScannedDocumentsRenamer"
+        )
+        os.makedirs(appdata_dir, exist_ok=True)
+        return os.path.join(appdata_dir, "instructions.json")
+
+
 def launch_app():
     """
     Initializes configuration, daemon, and launches the native PyWebView window.
@@ -555,8 +652,17 @@ def launch_app():
             shutil.copyfile(example_settings, settings_file)
             logger.info(f"Created settings.json from template at {settings_file}")
 
+    instructions_file = get_user_instructions_path()
+    if not os.path.exists(instructions_file):
+        bundled_instructions = get_asset_path("instructions.json")
+        if os.path.exists(bundled_instructions):
+            import shutil
+            os.makedirs(os.path.dirname(instructions_file), exist_ok=True)
+            shutil.copyfile(bundled_instructions, instructions_file)
+            logger.info(f"Created instructions.json from template at {instructions_file}")
+
     config = PipelineConfig.load(settings_file)
-    daemon = PipelineDaemon(config=config, settings_file=settings_file)
+    daemon = PipelineDaemon(config=config, settings_file=settings_file, instructions_file=instructions_file)
     api = DesktopBridgeAPI(daemon=daemon, settings_file=settings_file)
 
     logger.info("Initializing PyWebView Desktop Window...")

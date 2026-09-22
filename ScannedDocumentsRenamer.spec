@@ -51,7 +51,8 @@ HIDDEN_IMPORTS = [
 
 DATA_FILES = [
     ('gui', 'gui'),
-    ('settings.example.json', '.')
+    ('settings.example.json', '.'),
+    ('instructions.json', '.')
 ] + collect_data_files('rapidocr_onnxruntime') + collect_data_files('onnxruntime')
 
 a = Analysis(

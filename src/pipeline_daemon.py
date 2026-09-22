@@ -12,6 +12,7 @@ from src.dispatcher import AIAPIDispatcher
 from src.watch_manager import DynamicWatchManager
 from src.worker import worker_loop
 from src.client_manager import ClientManager
+from src.instructions_manager import get_instructions_manager, InstructionsManager
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,9 @@ class PipelineDaemon:
     Managed lifecycle controller for the file ingestion and AI classification daemon.
     Thread-safe and decoupled from the presentation layer (CLI or GUI).
     """
-    def __init__(self, config: Optional[PipelineConfig] = None, settings_file: str = "settings.json"):
+    def __init__(self, config: Optional[PipelineConfig] = None, settings_file: str = "settings.json", instructions_file: str = "instructions.json"):
         self.settings_file = settings_file
+        self.instructions_file = instructions_file
         self.config = config if config is not None else PipelineConfig.load(settings_file)
         
         self.is_running = False
@@ -66,6 +68,9 @@ class PipelineDaemon:
         self._listeners: List[Callable[[Dict[str, Any]], None]] = []
         self._lock = threading.Lock()
         
+        # Initialize Instructions Manager
+        self.instructions_mgr: InstructionsManager = get_instructions_manager(instructions_file=instructions_file)
+
         # Attach log listener handler
         self._log_handler = DaemonLogHandler(self.emit_event)
         self._log_handler.setFormatter(logging.Formatter("%(message)s"))
@@ -99,7 +104,8 @@ class PipelineDaemon:
             self.client_mgr = ClientManager(
                 base_watch_dir=base_watch,
                 clients_dir=self.config.clients_directory,
-                update_docx=self.config.update_clients_docx
+                update_docx=self.config.update_clients_docx,
+                enable_active_client=self.config.enable_active_client
             )
         return self.client_mgr
 
@@ -139,6 +145,15 @@ class PipelineDaemon:
         logger.info("Reset active client context to None (unlocked).")
         self.emit_status()
 
+    def is_active_client_enabled(self) -> bool:
+        return self._ensure_client_mgr().is_active_client_enabled()
+
+    def set_active_client_enabled(self, enabled: bool) -> None:
+        self._ensure_client_mgr().set_active_client_enabled(enabled)
+        self.config.enable_active_client = bool(enabled)
+        logger.info(f"Set active client context enabled state to: {enabled}")
+        self.emit_status()
+
     def get_status(self) -> Dict[str, Any]:
         return {
             "category": "status",
@@ -147,11 +162,13 @@ class PipelineDaemon:
             "processed_count": len(self.processed_records),
             "active_client": self.get_active_client(),
             "is_client_locked": self.is_client_locked(),
+            "active_client_enabled": self.is_active_client_enabled(),
             "watch_directories": self.config.watch_directories,
             "clients_directory": self.config.clients_directory,
             "provider": self.config.provider,
             "model_name": self.config.model_name,
-            "enable_wrapup": self.config.enable_wrapup
+            "enable_wrapup": self.config.enable_wrapup,
+            "enable_active_client": self.config.enable_active_client
         }
 
     def emit_status(self) -> None:
@@ -160,6 +177,22 @@ class PipelineDaemon:
     def get_recent_records(self, limit: int = 50) -> List[Dict[str, Any]]:
         with self._lock:
             return list(reversed(self.processed_records[-limit:]))
+
+    def get_instructions_data(self) -> Dict[str, Any]:
+        return {
+            "instructions": self.instructions_mgr.to_dict(),
+            "prompt_preview": self.instructions_mgr.get_system_prompt()
+        }
+
+    def update_instructions(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        self.instructions_mgr.update_instructions(payload)
+        logger.info("PipelineDaemon: document instructions updated.")
+        return self.get_instructions_data()
+
+    def reset_instructions(self) -> Dict[str, Any]:
+        self.instructions_mgr.reset_to_defaults()
+        logger.info("PipelineDaemon: document instructions reset to preset defaults.")
+        return self.get_instructions_data()
 
     def get_client_directories(self, custom_root: Optional[str] = None) -> List[str]:
         if self.client_mgr:
@@ -242,11 +275,13 @@ class PipelineDaemon:
             self.client_mgr = ClientManager(
                 base_watch_dir=base_watch,
                 clients_dir=self.config.clients_directory,
-                update_docx=self.config.update_clients_docx
+                update_docx=self.config.update_clients_docx,
+                enable_active_client=self.config.enable_active_client
             )
         else:
             self.client_mgr.set_base_directory(base_watch, clients_dir=self.config.clients_directory)
             self.client_mgr.update_docx = self.config.update_clients_docx
+            self.client_mgr.enable_active_client = self.config.enable_active_client
 
         # Initialize Dispatcher
         is_mock = mock_mode or (self.config.api_key in ("your-api-key-here", "", "YOUR_OPENROUTER_API_KEY_HERE"))

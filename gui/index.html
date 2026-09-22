@@ -156,7 +156,10 @@
                   <span>➕ Custom Client Name...</span>
                 </div>
                 <div class="client-dropdown-item clear-client-action" id="action-header-clear-client">
-                  <span>❌ Reset to Auto (Clear)</span>
+                  <span>🔄 Auto-detect Mode (Clear)</span>
+                </div>
+                <div class="client-dropdown-item disable-client-action" id="action-header-disable-client">
+                  <span>🚫 Disable Context (Default to Temporary)</span>
                 </div>
               </div>
             </div>
@@ -202,6 +205,17 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
           <span>Folders & Settings</span>
+        </button>
+
+        <button class="tab-button" data-tab="instructions" id="tab-btn-instructions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Instructions</span>
         </button>
 
         <button class="tab-button" data-tab="logs">
@@ -529,6 +543,14 @@
                 </button>
               </div>
               <div class="form-hint">When locked, all incoming scanned documents will be routed into this client folder, bypassing OCR detection.</div>
+
+              <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+                <label class="checkbox-group">
+                  <input type="checkbox" id="setting-enable-active-client" checked>
+                  <span><strong>Enable Active Client Context</strong> (carry over client across multi-page batches)</span>
+                </label>
+                <div class="form-hint" style="margin-left: 24px; margin-top: 2px;">When unchecked, unassigned scans default directly to the <code>Temporary</code> staging directory.</div>
+              </div>
             </div>
 
             <!-- Checkboxes -->
@@ -559,6 +581,155 @@
             </div>
 
           </form>
+        </div>
+
+        <!-- Floating Bottom-Right Save Action Bar -->
+        <div id="floating-settings-save" class="floating-settings-save-bar" aria-live="polite">
+          <div class="floating-save-status">
+            <span class="floating-save-dot"></span>
+            <span class="floating-save-text">Unsaved Changes</span>
+          </div>
+          <button type="button" id="btn-floating-discard-settings" class="btn-floating-discard" title="Discard unsaved changes and restore saved settings">
+            Discard
+          </button>
+          <button type="button" id="btn-floating-save-settings" class="btn btn-primary btn-floating-save" title="Save modified settings">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span>Save Settings</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Panel: Document Instructions & Custom File Types -->
+      <section id="panel-instructions" class="tab-content-panel">
+        <div class="instructions-panel-container">
+
+          <!-- Top Toolbar -->
+          <div class="instructions-toolbar">
+            <div class="instructions-title-block">
+              <div class="instructions-title">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <span>Document Instructions &amp; File Types</span>
+                <span class="instructions-count-badge" id="badge-total-rules">10 Types</span>
+              </div>
+              <p class="instructions-subtitle">
+                Customize recognition patterns, naming formats, and OCR rules for specific document types, or create new custom file types.
+              </p>
+            </div>
+
+            <div class="instructions-actions">
+              <button type="button" id="btn-add-file-type" class="btn btn-primary btn-sm">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Document Type</span>
+              </button>
+
+              <button type="button" id="btn-preview-prompt" class="btn btn-secondary btn-sm" title="View compiled AI System Prompt">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Preview Prompt</span>
+              </button>
+
+              <button type="button" id="btn-reset-instructions" class="btn btn-secondary btn-sm" title="Reset all document instructions to preset defaults">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                <span>Reset to Defaults</span>
+              </button>
+
+              <button type="button" id="btn-save-instructions" class="btn btn-emerald btn-sm" title="Save document instructions to instructions.json">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span id="txt-save-instructions">Save Instructions</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter & Search Controls -->
+          <div class="instructions-filter-bar">
+            <div class="search-input-wrapper">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="instructions-search" class="form-input" placeholder="Search document types, keywords, or formats...">
+            </div>
+
+            <div class="filter-pills-group">
+              <button type="button" class="filter-pill active" data-filter="all">All</button>
+              <button type="button" class="filter-pill" data-filter="active">Active Only</button>
+              <button type="button" class="filter-pill" data-filter="custom">Custom Only</button>
+              <button type="button" class="filter-pill" data-filter="preset">Presets</button>
+            </div>
+          </div>
+
+          <!-- Document Types List -->
+          <div id="instructions-cards-list" class="instructions-cards-grid">
+            <!-- Dynamically populated via JS -->
+          </div>
+
+          <!-- Empty search state -->
+          <div id="instructions-empty-state" class="instructions-empty" style="display: none;">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <div style="font-weight: 600; font-size: 14px; margin-top: 8px;">No Document Types Found</div>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 4px;">No rules matched your search query. Try clearing the filter or add a new custom document type.</p>
+          </div>
+
+          <!-- Collapsible Global Instructions Card -->
+          <div class="global-instructions-card">
+            <div class="global-instructions-header" id="btn-toggle-global-rules">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span style="font-size: 13.5px; font-weight: 600;">Global System Prompts &amp; Corporate Rules (Advanced)</span>
+              </div>
+              <svg id="icon-chevron-global" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="global-instructions-body" id="global-instructions-body" style="display: none;">
+              <div class="form-group" style="margin-top: 14px;">
+                <label class="form-label" for="txt-system-role">Base Assistant Role &amp; Visual Vision Instructions</label>
+                <textarea id="txt-system-role" class="form-textarea" rows="3" placeholder="You are an automated document vision &amp; OCR assistant..."></textarea>
+                <div class="form-hint">High-level role directive passed at the very top of the AI prompt.</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="txt-client-rules">Corporate Client Extraction &amp; Officer Verification Rules</label>
+                <textarea id="txt-client-rules" class="form-textarea" rows="6" placeholder="Corporate Secretary, officer patterns, bank exclusions..."></textarea>
+                <div class="form-hint">Rules determining how corporate names, business titles, and bank third-party exemptions are handled.</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="txt-formatting-rules">Output Formatting &amp; Output Examples</label>
+                <textarea id="txt-formatting-rules" class="form-textarea" rows="4" placeholder="Strict JSON requirements, example responses..."></textarea>
+                <div class="form-hint">Enforces valid JSON response schemas containing filename, client_name, and doc_date.</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -635,6 +806,119 @@
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
+
+  <!-- Modal: Edit / Add Document Type Rule -->
+  <div id="modal-edit-instruction" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="modal-icon-badge">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="modal-title" id="modal-rule-title">Edit Document Type Rule</div>
+            <div class="modal-subtitle" id="modal-rule-subtitle">Configure classification and renaming instructions for this document type</div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" id="btn-close-rule-modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="form-edit-rule" onsubmit="return false;">
+          <input type="hidden" id="edit-rule-id">
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label" for="edit-rule-name">Document / File Type Name *</label>
+              <input type="text" id="edit-rule-name" class="form-input" placeholder="e.g. Court Pleadings" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="edit-rule-priority">Priority Order</label>
+              <input type="number" id="edit-rule-priority" class="form-input" min="1" max="99" value="1">
+              <div class="form-hint">Lower numbers are matched first.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-rule-keywords">Detection &amp; Trigger Keywords (comma-separated)</label>
+            <input type="text" id="edit-rule-keywords" class="form-input" placeholder="e.g. Motion for Reconsideration, Entry of Appearance, Pleading">
+            <div class="form-hint">Headers, titles, or terms that identify this document type.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-rule-format">Target Filename Format Pattern *</label>
+            <input type="text" id="edit-rule-format" class="form-input" placeholder="e.g. Pleading <Case_No> MM_DD_YYYY.pdf" required>
+            <div class="form-hint">Standardized filename template (e.g. <code>&lt;Title&gt; MM_DD_YYYY.pdf</code>, <code>&lt;Numbers&gt;.pdf</code>).</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-rule-instructions">Extraction &amp; Processing Instructions</label>
+            <textarea id="edit-rule-instructions" class="form-textarea" rows="5" placeholder="Specify how AI should locate dates, numbers, handwriting, or special conditions..."></textarea>
+            <div class="form-hint">Provide detailed guidance for AI vision and OCR when processing this document type.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-group" style="font-size: 13.5px; font-weight: 500;">
+              <input type="checkbox" id="edit-rule-enabled" checked>
+              <span>Enable this document type rule in active processing pipeline</span>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-rule-modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-save-rule-modal">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>Apply Rule</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Live Prompt Preview -->
+  <div id="modal-prompt-preview" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="modal-icon-badge indigo">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <div>
+            <div class="modal-title">Compiled Multimodal AI System Prompt</div>
+            <div class="modal-subtitle">Real-time system prompt generated from your active document type rules and formatting guidelines</div>
+          </div>
+        </div>
+        <button type="button" class="btn-modal-close" id="btn-close-prompt-modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px;">
+        <div class="prompt-preview-container">
+          <pre id="prompt-preview-text" class="prompt-preview-code"></pre>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-copy-prompt">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="txt-copy-prompt">Copy Prompt to Clipboard</span>
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-dismiss-prompt-modal">Done</button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/app.js"></script>
 </body>

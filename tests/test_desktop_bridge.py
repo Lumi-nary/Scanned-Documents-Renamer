@@ -76,6 +76,19 @@ class TestDesktopBridgeAPI(unittest.TestCase):
 
         self.api.reset_active_client()
         self.assertIsNone(self.daemon.get_active_client())
+
+        # Test disable active client context
+        res_dis = self.api.set_active_client_enabled(False)
+        self.assertTrue(res_dis["success"])
+        self.assertFalse(res_dis["active_client_enabled"])
+        self.assertFalse(self.daemon.is_active_client_enabled())
+
+        # Test re-enable active client context
+        res_en = self.api.set_active_client_enabled(True)
+        self.assertTrue(res_en["success"])
+        self.assertTrue(res_en["active_client_enabled"])
+        self.assertTrue(self.daemon.is_active_client_enabled())
+
         self.api.stop_pipeline()
 
     def test_save_settings_with_new_folder_and_scan(self):
@@ -105,6 +118,41 @@ class TestDesktopBridgeAPI(unittest.TestCase):
         self.assertIn("Client A", custom_scan["clients"])
 
         self.api.stop_pipeline()
+
+    def test_bridge_instructions(self):
+        # 1. get_initial_data should include instructions
+        init_data = self.api.get_initial_data()
+        self.assertIn("instructions", init_data)
+        self.assertIn("prompt_preview", init_data)
+
+        # 2. get_instructions
+        res = self.api.get_instructions()
+        self.assertTrue(res["success"])
+        self.assertIn("instructions", res)
+        self.assertIn("prompt_preview", res)
+
+        # 3. save_instructions with new custom rule
+        file_types = res["instructions"]["file_types"]
+        custom_rule = {
+            "id": "po_rule",
+            "name": "Purchase Order",
+            "is_preset": False,
+            "enabled": True,
+            "priority": 1,
+            "match_keywords": ["Purchase Order", "PO#"],
+            "naming_format": "Purchase Order <PO_NUM>.pdf",
+            "instructions": "Extract PO Number."
+        }
+        updated_types = [custom_rule] + file_types
+        save_res = self.api.save_instructions({"file_types": updated_types})
+        self.assertTrue(save_res["success"])
+        self.assertEqual(len(save_res["instructions"]["file_types"]), len(file_types) + 1)
+        self.assertIn("Purchase Order", save_res["prompt_preview"])
+
+        # 4. reset_instructions
+        reset_res = self.api.reset_instructions()
+        self.assertTrue(reset_res["success"])
+        self.assertEqual(len(reset_res["instructions"]["file_types"]), len(file_types))
 
 if __name__ == "__main__":
     unittest.main()

@@ -34,6 +34,8 @@ def main():
     parser.add_argument("--wrap-batch", action="store_true", help="Force wrap up batch on exit/completion (creates Client folders and updates Clients.docx)")
     parser.add_argument("--enable-wrapup", action="store_true", help="Enable automatic batch wrapup functions")
     parser.add_argument("--disable-wrapup", action="store_true", help="Disable batch wrapup functions")
+    parser.add_argument("--enable-active-client", action="store_true", help="Enable active client context memory")
+    parser.add_argument("--disable-active-client", action="store_true", help="Disable active client context memory (unassigned documents default to Temporary)")
     parser.add_argument("--wrap", action="store_true", help="Signal active running pipeline daemon to wrap up current batch immediately")
     parser.add_argument("--demo", action="store_true", help="Run runtime path swapping demonstration")
     parser.add_argument("--gui", action="store_true", help="Launch the PyWebView Desktop GUI")
@@ -53,6 +55,10 @@ def main():
         config.enable_wrapup = True
     if args.disable_wrapup:
         config.enable_wrapup = False
+    if args.disable_active_client:
+        config.enable_active_client = False
+    elif args.enable_active_client:
+        config.enable_active_client = True
 
     # If --wrap signal flag is invoked, drop .wrap signal file in watched directory and parent Temporary directory
     if args.wrap:
@@ -79,6 +85,7 @@ def main():
 
     logger.info(f"Using Provider: {config.provider.upper()} | Endpoint: {config.base_url} | Model: {config.model_name}")
     logger.info(f"Batch Wrap-Up Functions Status: {'ENABLED' if config.enable_wrapup else 'DISABLED'}")
+    logger.info(f"Active Client Context Status: {'ENABLED' if config.enable_active_client else 'DISABLED (Defaults to Temporary)'}")
 
     if args.batch_export:
         logger.info("Generating batch API manifest from watched directories...")
@@ -98,7 +105,8 @@ def main():
 
     client_mgr = ClientManager(
         config.watch_directories[0] if config.watch_directories else os.getcwd(),
-        update_docx=config.update_clients_docx
+        update_docx=config.update_clients_docx,
+        enable_active_client=config.enable_active_client
     )
 
     def perform_batch_wrapup():
@@ -163,7 +171,7 @@ def main():
 
     # Interactive console command listener thread
     def console_listener():
-        logger.info("Live console active: Commands: 'client' (view active client), 'reset' (clear active client), 'status'")
+        logger.info("Live console active: Commands: 'client' (view active client), 'reset' (clear active client), 'disable-client', 'enable-client', 'status'")
         while not stop_event.is_set():
             try:
                 line = sys.stdin.readline()
@@ -171,12 +179,20 @@ def main():
                     break
                 cmd = line.strip().lower()
                 if cmd in ('client', 'c'):
-                    logger.info(f"[Active Client] Current sticky client context: '{client_mgr.get_active_client()}'")
+                    status_str = f"'{client_mgr.get_active_client()}'" if client_mgr.is_active_client_enabled() else "DISABLED (Defaults to Temporary)"
+                    logger.info(f"[Active Client] Current sticky client context: {status_str}")
                 elif cmd in ('reset', 'clear', 'reset-client', 'clear-client'):
                     client_mgr.reset_active_client()
                     logger.info("[Active Client] Sticky client context reset to None.")
+                elif cmd in ('disable-client', 'disable-active-client', 'off'):
+                    client_mgr.set_active_client_enabled(False)
+                    logger.info("[Active Client] Active client context DISABLED. Unassigned documents will default to 'Temporary'.")
+                elif cmd in ('enable-client', 'enable-active-client', 'on'):
+                    client_mgr.set_active_client_enabled(True)
+                    logger.info("[Active Client] Active client context ENABLED (Auto-detect sticky mode).")
                 elif cmd == 'status':
-                    logger.info(f"[Status] Queued: {work_queue.qsize()} | Active Client: '{client_mgr.get_active_client()}' | Processed files: {len(processed_records)}")
+                    active_info = f"'{client_mgr.get_active_client()}'" if client_mgr.is_active_client_enabled() else "DISABLED"
+                    logger.info(f"[Status] Queued: {work_queue.qsize()} | Active Client: {active_info} | Processed files: {len(processed_records)}")
                 elif cmd in ('wrap', 'wrapup', 'w', 'done'):
                     logger.info(f"[Console Command] '{cmd}' received. Checking for any unrouted files...")
                     perform_batch_wrapup()
