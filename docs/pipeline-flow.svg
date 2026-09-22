@@ -15,92 +15,120 @@
   <rect width="800" height="1128" fill="#020617"/>
   <rect width="800" height="1128" fill="url(#grid)"/>
   <circle cx="66" cy="47" r="5" fill="#34d399" class="pulse"/>
-  <text x="84" y="53" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="20" font-weight="700" fill="#f1f5f9" letter-spacing="0.4">SCANNED DOCUMENTS RENAMER</text>
-  <text x="84" y="78" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" fill="#94a3b8">Event-driven scan ingestion → LLM classification → automatic client filing</text>
-  <rect x="40" y="96" width="720" height="726" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.75"/>
-  <text x="56" y="117" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#fbbf24" letter-spacing="0.6">PYTHON DAEMON · main.py + src/ · Docker or systemd ai-ingest.service</text>
-  <rect x="80" y="140" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="140" width="300" height="88" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="230.0" y="170" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Scanner</text>
-  <text x="230.0" y="188" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">multi-page PDF scan job</text>
+  <text x="84" y="53" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="700" fill="#f1f5f9" letter-spacing="0.4">SCANNED DOCUMENTS RENAMER</text>
+  <text x="84" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#94a3b8">Automatic Scan Ingestion → Smart AI Reading → Organized Client Filing</text>
+  <rect x="40" y="96" width="720" height="726" rx="12" fill="none" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.75"/>
+  <text x="56" y="117" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="600" fill="#818cf8" letter-spacing="0.6">AUTOMATED 4-STEP FILING PIPELINE (ZERO TECHNICAL EFFORT REQUIRED)</text>
+  
+  <!-- Step 1: Scanner -->
+  <rect x="80" y="140" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="140" width="300" height="88" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="230.0" y="170" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">1. Physical Scanner</text>
+  <text x="230.0" y="188" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">You feed paper pages into your scanner</text>
+  <text x="230.0" y="204" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#64748b">Scanner generates a multi-page PDF</text>
   <circle cx="99" cy="159" r="11" fill="#0f172a" stroke="#94a3b8" stroke-width="1.3"/>
-  <text x="99" y="163" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#94a3b8">1</text>
-  <rect x="80" y="252" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="252" width="300" height="88" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="230.0" y="282" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Watch folder</text>
-  <text x="230.0" y="300" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">Temporary/Unprocessed</text>
+  <text x="99" y="163" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">1</text>
+
+  <!-- Step 2: Incoming Folder -->
+  <rect x="80" y="252" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="252" width="300" height="88" rx="8" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="230.0" y="282" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">2. Incoming Folder</text>
+  <text x="230.0" y="300" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Scanner drops PDF into watch folder</text>
+  <text x="230.0" y="316" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#64748b">e.g., Scan_20260922_0001.pdf</text>
   <circle cx="99" cy="271" r="11" fill="#0f172a" stroke="#94a3b8" stroke-width="1.3"/>
-  <text x="99" y="275" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#94a3b8">2</text>
-  <rect x="80" y="364" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="364" width="300" height="88" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-  <text x="230.0" y="394" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">watchdog Observer</text>
-  <text x="230.0" y="412" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">created + moved events</text>
-  <text x="230.0" y="427" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">no polling loop</text>
+  <text x="99" y="275" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">2</text>
+
+  <!-- Step 3: Scan Detection -->
+  <rect x="80" y="364" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="364" width="300" height="88" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="230.0" y="394" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">3. Automatic File Detection</text>
+  <text x="230.0" y="412" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">App instantly detects the new file</text>
+  <text x="230.0" y="427" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#6ee7b7">No need to click refresh or upload</text>
   <circle cx="99" cy="383" r="11" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
-  <text x="99" y="387" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#34d399">3</text>
-  <rect x="80" y="476" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="476" width="300" height="88" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-  <text x="230.0" y="506" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Stability gate</text>
-  <text x="230.0" y="524" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">size debounce poll</text>
-  <text x="230.0" y="539" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">exclusive write-lock test</text>
+  <text x="99" y="387" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#34d399">3</text>
+
+  <!-- Step 4: Completion Verification -->
+  <rect x="80" y="476" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="476" width="300" height="88" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="230.0" y="506" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">4. Safe Finish Verification</text>
+  <text x="230.0" y="524" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Waits until scanner finishes saving</text>
+  <text x="230.0" y="539" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#6ee7b7">Never interrupts multi-page jobs</text>
   <circle cx="99" cy="495" r="11" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
-  <text x="99" y="499" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#34d399">4</text>
-  <rect x="80" y="588" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="588" width="300" height="88" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
-  <text x="230.0" y="618" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Worker pool pulls</text>
-  <text x="230.0" y="636" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">thread-safe FIFO queue</text>
-  <text x="230.0" y="651" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">N consumer threads</text>
+  <text x="99" y="499" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#34d399">4</text>
+
+  <!-- Step 5: Document Queue -->
+  <rect x="80" y="588" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="588" width="300" height="88" rx="8" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+  <text x="230.0" y="618" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">5. Processing Queue</text>
+  <text x="230.0" y="636" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Queues scans in clean sequence</text>
+  <text x="230.0" y="651" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#fdba74">Handles rapid batches smoothly</text>
   <circle cx="99" cy="607" r="11" fill="#0f172a" stroke="#fb923c" stroke-width="1.3"/>
-  <text x="99" y="611" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#fb923c">5</text>
-  <rect x="80" y="700" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="80" y="700" width="300" height="88" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-  <text x="230.0" y="730" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Text extraction</text>
-  <text x="230.0" y="748" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">PyMuPDF text layer</text>
-  <text x="230.0" y="763" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">python-docx for .docx</text>
+  <text x="99" y="611" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#fb923c">5</text>
+
+  <!-- Step 6: Text & Visual Reading -->
+  <rect x="80" y="700" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="80" y="700" width="300" height="88" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="230.0" y="730" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">6. Reading Document Text</text>
+  <text x="230.0" y="748" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Reads text, headers, and dates</text>
+  <text x="230.0" y="763" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#6ee7b7">Supports PDF scans and Word documents</text>
   <circle cx="99" cy="719" r="11" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
-  <text x="99" y="723" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#34d399">6</text>
-  <rect x="420" y="140" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="140" width="300" height="88" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
-  <text x="570.0" y="170" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Client folder tree</text>
-  <text x="570.0" y="188" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">moved + filed per client</text>
-  <text x="570.0" y="203" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">{Client}/{Doc Type}/name.pdf</text>
-  <circle cx="439" cy="159" r="11" fill="#0f172a" stroke="#a78bfa" stroke-width="1.3"/>
-  <text x="439" y="163" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#a78bfa">12</text>
-  <rect x="420" y="252" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="252" width="300" height="88" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
-  <text x="570.0" y="282" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Rename + dedupe</text>
-  <text x="570.0" y="300" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">filename sanitizer</text>
-  <text x="570.0" y="315" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">collision-safe _2, _3</text>
-  <circle cx="439" cy="271" r="11" fill="#0f172a" stroke="#a78bfa" stroke-width="1.3"/>
-  <text x="439" y="275" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#a78bfa">11</text>
-  <rect x="420" y="364" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="364" width="300" height="88" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
-  <text x="570.0" y="394" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Rule classifier</text>
-  <text x="570.0" y="412" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">6 numbered rules + doc-type</text>
-  <text x="570.0" y="427" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">table, then date / Doc-No</text>
-  <circle cx="439" cy="383" r="11" fill="#0f172a" stroke="#a78bfa" stroke-width="1.3"/>
-  <text x="439" y="387" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#a78bfa">10</text>
-  <rect x="420" y="476" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="476" width="300" height="88" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
-  <text x="570.0" y="506" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Structured reply</text>
-  <text x="570.0" y="524" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">{filename, client_name,</text>
-  <text x="570.0" y="539" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">doc_date} as strict JSON</text>
-  <circle cx="439" cy="495" r="11" fill="#0f172a" stroke="#fbbf24" stroke-width="1.3"/>
-  <text x="439" y="499" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#fbbf24">9</text>
-  <rect x="420" y="588" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="588" width="300" height="88" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
-  <text x="570.0" y="618" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">LLM API (your key)</text>
-  <text x="570.0" y="636" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">OpenRouter · DeepSeek</text>
-  <text x="570.0" y="651" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">OpenAI · Groq</text>
-  <circle cx="439" cy="607" r="11" fill="#0f172a" stroke="#fbbf24" stroke-width="1.3"/>
-  <text x="439" y="611" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#fbbf24">8</text>
-  <rect x="420" y="700" width="300" height="88" rx="6" fill="#0f172a"/>
-  <rect x="420" y="700" width="300" height="88" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
-  <text x="570.0" y="730" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" font-weight="600" fill="#e2e8f0">Dispatcher</text>
-  <text x="570.0" y="748" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">HTTPS + bearer auth</text>
-  <text x="570.0" y="763" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.5" fill="#94a3b8">backoff + retry policy</text>
+  <text x="99" y="723" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#34d399">6</text>
+
+  <!-- Step 7: Classification Engine -->
+  <rect x="420" y="700" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="700" width="300" height="88" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="570.0" y="730" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">7. Intelligent Classification</text>
+  <text x="570.0" y="748" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Runs via 100% Offline OCR or AI</text>
+  <text x="570.0" y="763" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#6ee7b7">OpenRouter, DeepSeek, OpenAI, or Local</text>
   <circle cx="439" cy="719" r="11" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
-  <text x="439" y="723" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" font-weight="700" fill="#34d399">7</text>
+  <text x="439" y="723" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#34d399">7</text>
+
+  <!-- Step 8: Document Understanding -->
+  <rect x="420" y="588" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="588" width="300" height="88" rx="8" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="570.0" y="618" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">8. Document Understanding</text>
+  <text x="570.0" y="636" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Finds Document Type &amp; Date</text>
+  <text x="570.0" y="651" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#fde68a">Detects Corporate Secretary / Officer</text>
+  <circle cx="439" cy="607" r="11" fill="#0f172a" stroke="#fbbf24" stroke-width="1.3"/>
+  <text x="439" y="611" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#fbbf24">8</text>
+
+  <!-- Step 9: Structured Details -->
+  <rect x="420" y="476" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="476" width="300" height="88" rx="8" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="570.0" y="506" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">9. Extracted Information</text>
+  <text x="570.0" y="524" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Title, Client Name, and Date</text>
+  <text x="570.0" y="539" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#fde68a">e.g. Acme Corp · Doc. No. 387 · 09/12/2025</text>
+  <circle cx="439" cy="495" r="11" fill="#0f172a" stroke="#fbbf24" stroke-width="1.3"/>
+  <text x="439" y="499" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#fbbf24">9</text>
+
+  <!-- Step 10: Instructions Matching -->
+  <rect x="420" y="364" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="364" width="300" height="88" rx="8" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="570.0" y="394" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">10. Your Custom Rules</text>
+  <text x="570.0" y="412" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Applies your preferred naming style</text>
+  <text x="570.0" y="427" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#c4b5fd">From the 'Instructions' Tab in the app</text>
+  <circle cx="439" cy="383" r="11" fill="#0f172a" stroke="#a78bfa" stroke-width="1.3"/>
+  <text x="439" y="387" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#a78bfa">10</text>
+
+  <!-- Step 11: Professional Renaming -->
+  <rect x="420" y="252" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="252" width="300" height="88" rx="8" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="570.0" y="282" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" fill="#e2e8f0">11. Professional Rename</text>
+  <text x="570.0" y="300" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Clean, standard, searchable filename</text>
+  <text x="570.0" y="315" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#c4b5fd">Prevents accidental overwrites (_2, _3)</text>
+  <circle cx="439" cy="271" r="11" fill="#0f172a" stroke="#a78bfa" stroke-width="1.3"/>
+  <text x="439" y="275" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#a78bfa">11</text>
+
+  <!-- Step 12: Filed into Client Folder -->
+  <rect x="420" y="140" width="300" height="88" rx="8" fill="#0f172a"/>
+  <rect x="420" y="140" width="300" height="88" rx="8" fill="rgba(6,78,59,0.5)" stroke="#34d399" stroke-width="1.8"/>
+  <text x="570.0" y="170" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#34d399">12. Automatically Filed!</text>
+  <text x="570.0" y="188" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#e2e8f0">Moved directly into the client's folder</text>
+  <text x="570.0" y="203" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#a7f3d0">e.g. Clients/Acme Corp/Certificate.pdf</text>
+  <circle cx="439" cy="159" r="11" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
+  <text x="439" y="163" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#34d399">12</text>
+
+  <!-- Flow Arrows -->
   <line x1="230.0" y1="230" x2="230.0" y2="249" stroke="#34d399" stroke-width="1.7" marker-end="url(#head-emerald)"/>
   <line x1="230.0" y1="342" x2="230.0" y2="361" stroke="#34d399" stroke-width="1.7" marker-end="url(#head-emerald)"/>
   <line x1="230.0" y1="454" x2="230.0" y2="473" stroke="#34d399" stroke-width="1.7" marker-end="url(#head-emerald)"/>
@@ -111,38 +139,29 @@
   <line x1="570.0" y1="585" x2="570.0" y2="566" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#head-violet)"/>
   <line x1="570.0" y1="473" x2="570.0" y2="454" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#head-violet)"/>
   <line x1="570.0" y1="361" x2="570.0" y2="342" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#head-violet)"/>
-  <line x1="570.0" y1="249" x2="570.0" y2="230" stroke="#a78bfa" stroke-width="1.7" marker-end="url(#head-violet)"/>
-  <rect x="80" y="838.0" width="300" height="68" rx="6" fill="#0f172a"/>
-  <rect x="80" y="838.0" width="300" height="68" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="230.0" y="868.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="600" fill="#e2e8f0">src/config.py · settings.json</text>
-  <text x="230.0" y="886.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.2" fill="#94a3b8">env vars override file</text>
-  <text x="230.0" y="901.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.2" fill="#94a3b8">watch paths switch at runtime</text>
-  <rect x="420" y="838.0" width="300" height="68" rx="6" fill="#0f172a"/>
-  <rect x="420" y="838.0" width="300" height="68" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="570.0" y="868.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="600" fill="#e2e8f0">main.py CLI</text>
-  <text x="570.0" y="886.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.2" fill="#94a3b8">--mock · --workers N</text>
-  <text x="570.0" y="901.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.2" fill="#94a3b8">--enable-wrapup · --watch-dir</text>
-  <rect x="80" y="939.0" width="640" height="58" rx="6" fill="#0f172a"/>
-  <rect x="80" y="939.0" width="640" height="58" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="400.0" y="969.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10.5" font-weight="600" fill="#e2e8f0">tests/ — 7 unittest modules</text>
-  <text x="400.0" y="987.0" text-anchor="middle" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="8.2" fill="#94a3b8">python -m unittest discover tests</text>
-  <line x1="230.0" y1="838" x2="230.0" y2="826" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="4,4" marker-end="url(#head-cyan)"/>
-  <line x1="570.0" y1="838" x2="570.0" y2="826" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="4,4" marker-end="url(#head-cyan)"/>
-  <rect x="80" y="1018" width="13" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.2"/>
-  <text x="99" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">daemon stage</text>
-  <rect x="179.2" y="1018" width="13" height="10" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.2"/>
-  <text x="198.2" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">queue</text>
-  <rect x="239.2" y="1018" width="13" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.2"/>
-  <text x="258.2" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">external LLM API</text>
-  <rect x="360.79999999999995" y="1018" width="13" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.2"/>
-  <text x="379.79999999999995" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">rename / file</text>
-  <rect x="465.59999999999997" y="1018" width="13" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="484.59999999999997" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">scanner + OS</text>
-  <rect x="564.8" y="1018" width="13" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.2"/>
-  <text x="583.8" y="1027" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#94a3b8">support</text>
-  <line x1="80" y1="1044" x2="720" y2="1044" stroke="#1e293b" stroke-width="1"/>
-  <text x="80" y="1066" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#fb7185">NEVER COMMITTED: client PDFs, client folder names, settings.json,</text>
-  <text x="80" y="1081" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#fb7185">API keys — .gitignore is an allowlist, so data cannot be staged by accident.</text>
-  <text x="80" y="1101" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#fbbf24">OUTBOUND: one document&#8217;s extracted text per request, to the provider you</text>
-  <text x="80" y="1116" font-family="JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="9" fill="#fbbf24">configure. Use --mock for a fully offline run.</text>
+  <line x1="570.0" y1="249" x2="570.0" y2="230" stroke="#34d399" stroke-width="1.7" marker-end="url(#head-emerald)"/>
+
+  <!-- Bottom Feature Highlights -->
+  <rect x="80" y="838.0" width="300" height="68" rx="8" fill="#0f172a"/>
+  <rect x="80" y="838.0" width="300" height="68" rx="8" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="230.0" y="866.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#e2e8f0">Folders &amp; Settings + Floating Save</text>
+  <text x="230.0" y="884.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#94a3b8">Pick scanner &amp; client folders with one click</text>
+  <text x="230.0" y="899.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#22d3ee">Floating save button pops up when you make edits</text>
+
+  <rect x="420" y="838.0" width="300" height="68" rx="8" fill="#0f172a"/>
+  <rect x="420" y="838.0" width="300" height="68" rx="8" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+  <text x="570.0" y="866.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#e2e8f0">Instructions Tab (Custom Rules)</text>
+  <text x="570.0" y="884.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#94a3b8">Customize rules for SOA, Liquidation, Deeds, etc.</text>
+  <text x="570.0" y="899.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#c4b5fd">Add your own document types without coding</text>
+
+  <rect x="80" y="939.0" width="640" height="58" rx="8" fill="#0f172a"/>
+  <rect x="80" y="939.0" width="640" height="58" rx="8" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+  <text x="400.0" y="966.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#e2e8f0">Ready for Non-Technical Office Staff</text>
+  <text x="400.0" y="984.0" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#a7f3d0">Download the Windows .exe, choose your folders, and click "Start Ingestion" — Zero setup required!</text>
+
+  <!-- Footer Legend & Privacy Notice -->
+  <line x1="80" y1="1025" x2="720" y2="1025" stroke="#1e293b" stroke-width="1"/>
+  <text x="80" y="1055" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="600" fill="#34d399">🔒 100% PRIVATE &amp; SECURE:</text>
+  <text x="80" y="1075" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Your files, PDFs, and client names never leave your computer unless you connect a cloud AI.</text>
+  <text x="80" y="1095" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" fill="#94a3b8">Runs completely offline in Native mode with zero API keys and zero recurring subscriptions.</text>
 </svg>

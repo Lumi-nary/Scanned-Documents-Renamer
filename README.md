@@ -1,233 +1,239 @@
-# Scanned Documents Renamer
+# 📁 Scanned Documents Renamer
 
-**Point it at a scanner's output folder. It reads each new scan, works out what the document actually is, renames it properly, and files it under the right client.**
+**Point it at your scanner's output folder. It reads every new scan, figures out what document it is, renames it properly, and files it neatly under the right client.**
 
-Built for offices that scan corporate, legal, tax and billing paperwork all day and lose half of it in a folder called `Unprocessed`. The pipeline is a background daemon: it watches, waits for each file to finish writing, sends the text to an LLM for classification, then applies deterministic rename rules and moves the file into a per-client folder.
-
-![Scanned Documents Renamer pipeline flow map](docs/pipeline-flow.png)
-
-<sub>Flow map: [`docs/pipeline-flow.svg`](docs/pipeline-flow.svg) (vector source)</sub>
-
----
-
-## Why it exists
-
-- **Scanning is fast, filing is slow.** The bottleneck is not the scanner, it is deciding what each page is and where it belongs.
-- **Filenames matter.** A file named `20250912_0003.pdf` is invisible. `Secretary's Certificate Doc. No. 387.pdf` is searchable, and it lands in the right client folder automatically.
-- **Nothing about your documents should leak into your repo.** `.gitignore` here is an allowlist: client folders, PDFs and `settings.json` cannot be staged, even by accident.
+[![Windows 10 & 11 Ready](https://img.shields.io/badge/Windows-10%20%7C%2011%20Ready-0078D4?style=flat-square&logo=windows&logoColor=white)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)
+[![100% Offline Capable](https://img.shields.io/badge/Privacy-100%25%20Offline%20Capable-28a745?style=flat-square&logo=shield)](docs/pipeline-flow.svg)
+[![73 Unit Tests Passing](https://img.shields.io/badge/Tests-73%2F73%20Passing-brightgreen?style=flat-square&logo=pytest)](tests/)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial%201.0-blue?style=flat-square)](LICENSE)
 
 ---
 
-## How it works
+## 💡 What Does This App Do?
 
-1. **Scan** — your scanner drops a multi-page PDF into a watch folder (e.g. `Temporary/Unprocessed`).
-2. **Observe** — `watchdog` fires on *created* and *moved* events. No polling loop.
-3. **Verify** — a stability gate polls file size until it stops growing, then tests the write lock, so a half-copied scan is never processed.
-4. **Queue** — validated paths go onto a thread-safe FIFO queue; producers never block on the network.
-5. **Extract** — worker threads pull from the queue and pull text out of the document (PyMuPDF text layer for PDFs, `python-docx` for Word files).
-6. **Classify** — the extracted text goes to the configured LLM with a strict prompt that returns one JSON object per document:
-   ```json
-   {"filename": "Secretary's Certificate Doc. No. 387.pdf",
-    "client_name": "Example Holdings Corp",
-    "doc_date": "09/12/2025"}
-   ```
-7. **Rename** — deterministic rules in `src/organizer.py` build the final filename (document type, Doc. No. when present, otherwise date), sanitize it, and resolve collisions as `name_2.pdf`, `name_3.pdf`.
-8. **File** — the document moves into its client folder; with wrap-up enabled, a batch is closed out and `Clients.docx` is updated with the client's date range.
+If your office scans invoices, tax documents, corporate certificates, receipts, or contracts all day, you probably know the pain of having an **`Unprocessed`** folder overflowing with useless filenames like `Scan_20260922_0001.pdf` or `20250912_0003.pdf`.
 
-The LLM is used for *reading*, not for *file naming policy* — the naming rules are local, deterministic and testable, so the same input always produces the same filename.
+**Scanned Documents Renamer runs quietly in the background on your computer.** The moment your scanner finishes saving a new file, the app reads the document, figures out what it actually is, gives it a clear name, and moves it directly into the correct client's folder.
+
+### 📋 Before & After Comparison
+
+| ❌ What your scanner produces | ✅ What this app turns it into | Where it lands |
+| :--- | :--- | :--- |
+| `Scan_20260922_0001.pdf` | `Secretary's Certificate Doc. No. 387.pdf` | `📁 Clients / Acme Holdings Corp /` |
+| `20250912_0003.pdf` | `BIR 2303 - Certificate of Registration.pdf` | `📁 Clients / Pacific Global Trade /` |
+| `doc0049282026.pdf` | `Statement of Account 1185.pdf` | `📁 Clients / Sunrise Enterprises /` |
+| `Scan_Batch_04.pdf` | `Summary of Services Rendered 09_15_2025.pdf` | `📁 Clients / Bright Future Corp /` |
 
 ---
 
-## Rename & classification rules
+## 🔄 How It Works (In 4 Simple Steps)
 
-`src/organizer.py` applies numbered rules before any model output is trusted:
+You don't need any technical knowledge to use this software. Here is the entire process from scanner to filing cabinet:
 
-| Rule | Document family |
-| --- | --- |
-| 1 | Liquidation of Deposit for Out-of-Pocket Expenses |
-| 2 | Statement of Account / SOA / OPE — reduced to its reference digits (`OPE-1185` → `1185.pdf`) |
-| 3 | Transmittal Sheet (requires an explicit header, so it cannot be matched by accident) |
-| 4 | Summary of Services / Services Rendered |
-| 5 | Certificates & registration documents (Certificate of Incorporation, Certificate of Registration, BIR 2303, Authority to Print, BIR 1901–1906, Secretary's Certificate, Certificate of Filing) |
-| 6 | Tax returns & declarations (e.g. Documentary Stamp Tax declaration returns) |
+```mermaid
+flowchart TD
+    A["📄 Step 1: Scan Document
+Your scanner saves a new file into your incoming folder"] 
+    --> B["⏳ Step 2: Safe Completion Check
+The app waits for multi-page scans to finish writing completely"]
+    --> C["🧠 Step 3: Smart Document Reading
+Reads the text, detects the document type, date, and client name"]
+    --> D["📁 Step 4: Auto-Rename & File
+Gives the file a clean name and moves it to the client's folder!"]
 
-Filenames follow the document, not the scan:
-
-```
-Secretary's Certificate Doc. No. 387.pdf     # Doc. No. found in the notary block
-Secretary's Certificate 06_26_2025.pdf       # no Doc. No. -> first page date
-OPE-1185.pdf -> 1185.pdf                     # reference-numbered documents
+    classDef step fill:#f0f7ff,stroke:#0078d4,stroke-width:2px,color:#102a43,font-size:14px;
+    class A,B,C,D step;
 ```
 
-Client attribution prefers the corporate-officer pattern (`"...being the duly qualified Corporate Secretary of EXAMPLE HOLDINGS CORP."` → `Example Holdings Corp`), falls back to the active client (when enabled), and normalizes names to Title Case.
+<br>
 
-When **Active Client Context** is disabled (via the GUI card dropdown, Settings modal, or CLI flag `--disable-active-client`), unassigned or unrecognized documents default directly to the `Temporary` staging directory instead of inheriting previous clients or creating generic client folders.
+<div align="center">
+  <a href="docs/pipeline-flow.svg">
+    <img src="docs/pipeline-flow.svg" alt="Scanned Documents Renamer Visual Workflow Map" width="100%">
+  </a>
+  <p><sub><em>Click the diagram above to view the full high-resolution visual flow map (<a href="docs/pipeline-flow.svg">docs/pipeline-flow.svg</a>).</em></sub></p>
+</div>
 
----
-
-## Providers & Recommended AI Models
-
-Any OpenAI-compatible endpoint. Built-in presets in `src/config.py`:
-
-| Preset | Base URL | Default / Recommended Model | Description & Pricing |
-| --- | --- | --- | --- |
-| `native` | *(Offline)* | `Built-in Rules + Local PP-OCR` | 100% offline, zero API cost, deterministic rule classifier + local ONNX OCR |
-| `openrouter` | `https://openrouter.ai/api/v1` | `qwen/qwen3-vl-32b-instruct` | **Recommended:** Ultra-fast dedicated Vision OCR ($0.10/M tokens, 0.72s). DeepSeek Flash Vision: `deepseek/deepseek-v4-flash-vision-exp` ($0.22/M). |
-| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat` | Cost-effective text reasoning & JSON extraction ($0.25/M tokens) |
-| `openai` | `https://api.openai.com/v1` | `gpt-4o-mini` | Direct OpenAI Vision ($0.15/M tokens) |
-| `ollama` | `http://localhost:11434/v1` | `llama3.2-vision` | Local multimodal vision running on your own GPU/CPU |
-| `groq` | `https://api.groq.com/openai/v1` | `llama-3.1-8b-instant` | Ultra-low latency text classification on Groq LPUs |
-
-### Top 2026 OpenRouter Models for Document Processing
-
-- **Best for Visual Document OCR (Scans, receipts, stamps, tables, skewed angles):**
-  - `qwen/qwen3-vl-32b-instruct` ($0.10/M in, $0.41/M out, 0.72s latency) — Ultra-fast dedicated Vision OCR for receipts & docs.
-  - `deepseek/deepseek-v4-flash-vision-exp` ($0.22/M in, $0.66/M out, 1M context, 0.80s latency) — DeepSeek's native Flash Vision.
-  - `google/gemini-3.1-flash-lite` ($0.25/M in, $1.50/M out, 1M context, 1.25s latency) — Google's latest 3.x Flash vision tier.
-  - `google/gemini-3.8-flash` ($0.75/M in, $3.75/M out, 1M context) — Flagship 3.8 Flash with native reasoning and layout parsing.
-  - `openai/gpt-5-nano` ($0.05/M in, $0.40/M out, 400k context) — OpenAI's newest multimodal nano model.
-- **Best for Deep Thinking & Complex Reasoning (Tax docs, contracts, ambiguous cross-references):**
-  - `qwen/qwen3-vl-30b-a3b-thinking` ($0.20/M in, $2.40/M out, 262k context) — Visual OCR + native chain-of-thought thinking tokens.
-  - `deepseek/deepseek-r1-0528` ($0.50/M in, $2.15/M out, 163k context) — Flagship open reasoning model for tricky legal contracts.
-  - `~deepseek/deepseek-v4-flash-latest` ($0.035/M in, $0.106/M out, 1.3M context) — Dirt-cheap ($0.035/M) high-speed classification.
-  - `qwen/qwen3.7-flash` ($0.030/M in, $0.130/M out, 1M context) — Ultra-budget, rapid 1.0s logical deduction.
-
-The dispatcher adds bearer auth, a request timeout, and exponential backoff with capped retries.
+### Step-by-Step Breakdown:
+1. **Scan or Drop**: Your scanner (Fujitsu ScanSnap, Brother, Canon, HP, Ricoh, etc.) drops a PDF into your incoming scan folder.
+2. **Safe Completion Check**: The app automatically waits until the scanner has 100% finished writing all pages. You'll never get a broken or half-copied file.
+3. **Smart Document Reading**: The app inspects the text layer or visual scan. It checks who issued the document, what kind of document it is (e.g. Certificate, Tax Return, Invoice), and finds key identifiers like Document Numbers or dates.
+4. **Instant Renaming & Filing**: The file is cleanly renamed and filed away in your organized client archive. If a file with that name already exists, it safely appends `_2.pdf` so nothing is ever overwritten.
 
 ---
 
+## 🚀 Quickstart: How to Use the App (3 Easy Steps)
+
+No programming or setup required! Just run the desktop app:
+
+### 1. Download & Open
+Download the Windows installer or portable standalone program:
+- 📦 **[Download Windows Setup Installer v1.0.0 (.exe)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)** (Recommended — creates desktop & start menu shortcuts)
+- 🗂️ **Or run the portable version:** Open `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive.
+
+### 2. Choose Your Folders
+In the desktop window:
+- Click **"Browse..."** under **Scan Input Folder** and pick the folder your scanner saves files to (e.g., `C:\Scans\Incoming`).
+- Click **"Browse..."** under **Client Documents Folder** and pick where you want organized folders to live (e.g., `C:\Company\Clients`).
+
+### 3. Click "Start Watching"
+Click the green **"Start Watching"** button. That's it! 
+Now, whenever you scan a document or drag a PDF into your incoming folder, watch the live feed — it will automatically read, rename, and file it in seconds.
+
 ---
 
-## Dedicated Windows Desktop Application & Installer
+## ✨ Friendly Features Built for Your Office
 
-For non-technical users and office staff who don't have Python installed:
+### 📋 Customizable "Instructions" Tab
+Every business has unique documents and naming preferences. With the **Instructions** tab, you can customize how different document types are recognized and named without touching a line of code!
+- **10 Built-in Office Presets**: Pre-configured rules for Corporate Certificates, Statements of Account, Tax Returns, Identity Documents, Contracts, and more.
+- **Add Your Own Document Types**: Click **"+ Add Document Type"**, type your document name (e.g., *"Lease Agreement"*), specify the naming pattern, and you're done.
+- **Search & Filter**: Quickly find and review any document rule with the search bar.
+- **Preview AI Instructions**: Click **"Preview Full AI Prompt"** to see exactly what instructions the AI will follow.
 
-[![Download Windows Installer](https://img.shields.io/badge/Download-Windows%20Setup%20Installer%20v1.0.0-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe)
+### 💾 Floating "Save Settings" Bar
+Never lose your configuration! Whenever you make changes to folders, AI models, or instructions:
+- An unmistakable **Floating Action Bar** pops up in the bottom-right corner showing: *"You have unsaved changes"*.
+- Click **"Save Settings"** to instantly apply your changes, or click **"Discard"** to revert.
+- The app even warns you if you try to switch tabs or close the window with unsaved changes.
 
-- **Dedicated Windows Installer:** Download and run [ScannedDocumentsRenamer_Setup_v1.0.0.exe](https://github.com/Lumi-nary/Scanned-Documents-Renamer/raw/main/dist/installer/ScannedDocumentsRenamer_Setup_v1.0.0.exe) directly. It provides a full Windows setup wizard, creates Start Menu and Desktop shortcuts, and sets up a clean uninstaller.
-- **Portable Mode:** Run `dist/ScannedDocumentsRenamer/ScannedDocumentsRenamer.exe` directly from any folder or USB drive without installing.
-- **Native Windows folder dialogs:** Pick your scanner's destination folder visually with a standard "Browse..." button.
-- **Visual Settings:** Configure AI providers (OpenRouter, DeepSeek, OpenAI, Groq, or Mock offline mode), models, and API keys without editing JSON files.
-- **Live Ingestion Feed:** Watch documents being detected, read by AI Vision OCR, renamed, and organized in real time.
-- **One-Click Explorer Access:** Click "Show in Folder" on any filed document to instantly reveal it in Windows Explorer.
-- **Zero Configuration Required:** Includes a built-in Mock mode for testing without an API key.
+### 👤 Active Client Context (Batch Scanning Mode)
+- **Working on a single client today?** Select their name from the **Active Client** dropdown. Every document scanned during that session will route straight into that client's folder.
+- **Scanning a mixed stack of documents?** Turn Active Client off (or set to *"Auto-Detect Only"*), and the AI will figure out the client for each individual document automatically.
 
-### Building the Installer from Source
+### 🔒 100% Private & Offline Mode
+- **Zero Document Leakage**: Your files never leave your computer unless you explicitly choose to connect an online AI provider.
+- **Local Rule Engine**: Select **"Built-in Rules + Local OCR"** in Settings to run 100% offline with zero external API calls and $0.00 cost.
+- **Git Security**: The repository includes strict security rules (`.gitignore` allowlist) ensuring client names, scanned PDFs, and local settings can never accidentally be committed or shared.
 
+---
+
+## 🤖 Supported AI Providers & Models
+
+You can use the built-in free offline mode, or connect any modern AI provider for advanced visual document understanding:
+
+| Provider | Internet Required? | Recommended Model | Best For | Typical Cost |
+| :--- | :---: | :--- | :--- | :--- |
+| **Built-in Rules (Offline)** | ❌ No (100% Offline) | `Built-in Rules + Local PP-OCR` | Standard office paperwork, maximum privacy | **$0.00 (Free)** |
+| **OpenRouter** *(Recommended)* | 🌐 Yes | `qwen/qwen3-vl-32b-instruct` | Scans, receipts, stamps, skewed paperwork | ~$0.0001 / document |
+| **DeepSeek** | 🌐 Yes | `deepseek-chat` / `deepseek-v4` | High-accuracy legal contracts & text reasoning | ~$0.0002 / document |
+| **OpenAI** | 🌐 Yes | `gpt-4o-mini` | Direct OpenAI vision integration | ~$0.0005 / document |
+| **Groq** | 🌐 Yes | `llama-3.1-8b-instant` | Near-instant millisecond classification | Ultra-low cost |
+| **Ollama** | ❌ No (Local AI) | `llama3.2-vision` | Running your own AI models on your computer | **$0.00 (Free)** |
+
+*Tip: You can switch providers at any time directly in the desktop **Settings** tab!*
+
+---
+
+## 🔧 Advanced & Developer Guide
+
+*This section is for developers, system administrators, and IT professionals who wish to run from source, automate via command line, deploy with Docker, or run tests.*
+
+### Running from Python Source
 ```bash
-# 1. Compile the standalone executable:
-python build_exe.py
-
-# 2. Or compile the complete Windows Setup Installer:
-installer\build_installer.bat
-```
-
----
-
-## Quickstart
-
-### Option A: Setup Installer / Desktop App (No Python Required)
-```bash
-# Run the dedicated Windows installer wizard:
-dist\installer\ScannedDocumentsRenamer_Setup_v1.0.0.exe
-
-# Or run the portable standalone app:
-dist\ScannedDocumentsRenamer\ScannedDocumentsRenamer.exe
-```
-
-### Option B: Run from Python Source
-```bash
-# Double-click "Run Scanned Documents Renamer.bat" or run:
-python app.py
-```
-
-### Option C: Headless Command Line (For Servers & Automation)
-```bash
+# 1. Clone the repository
 git clone https://github.com/Lumi-nary/Scanned-Documents-Renamer.git
 cd Scanned-Documents-Renamer
-pip install -r requirements.txt        # watchdog, pymupdf, python-docx, pywebview
-cp settings.example.json settings.json # or configure visually in the Desktop UI
-python main.py
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Launch Desktop GUI
+python app.py
+
+# Or double-click the helper script:
+"Run Scanned Documents Renamer.bat"
 ```
 
-`settings.json` and environment variables are both honored (env wins):
+### Running Headless (CLI / Server Mode)
+To run without a user interface (ideal for headless office servers, NAS systems, or background automation):
+```bash
+python main.py --watch-dir "C:/Scans/Incoming" --provider openrouter
+```
+
+### Command-Line Arguments (CLI)
+
+| Flag | Description |
+| :--- | :--- |
+| `--gui` | Launch the PyWebView Desktop GUI window |
+| `--watch-dir PATH` | Set or override the directory to monitor for new scans |
+| `--output-dir PATH` | Set directory where AI response logs are written |
+| `--provider NAME` | Choose AI provider (`native`, `openrouter`, `deepseek`, `openai`, `groq`, `ollama`) |
+| `--mock` | Run full pipeline offline with mock data (dry run) |
+| `--workers N` | Number of parallel worker threads (default: 2) |
+| `--disable-active-client` | Disable client context inheritance; unassigned docs stay in staging |
+| `--enable-wrapup` / `--disable-wrapup` | Enable or disable automatic batch wrap-up tracking |
+| `--wrap-batch` | Force wrap-up and finalize the current batch on exit |
+| `--wrap` | Send wrap-up signal to an actively running background daemon |
+| `--batch-export PATH` | Export queued files as a JSONL batch-API manifest and exit |
+| `--demo` | Run interactive demonstration of runtime watch-path swapping |
+
+### Configuration via `settings.json` or Environment Variables
+Settings can be defined in `settings.json` (created automatically by the GUI) or via environment variables (environment variables take precedence):
 
 ```json
 {
   "watch_directories": ["./Temporary/Unprocessed"],
+  "destination_directory": "./Clients",
   "provider": "openrouter",
-  "model_name": "google/gemini-2.5-flash",
-  "api_key": "YOUR_OPENROUTER_API_KEY_HERE",
+  "model_name": "qwen/qwen3-vl-32b-instruct",
+  "api_key": "YOUR_API_KEY_HERE",
   "num_workers": 2,
-  "stability_timeout": 30
+  "stability_timeout": 30,
+  "active_client_context": true
 }
 ```
 
 ```bash
-export AI_API_KEY="..."          # API key
-export AI_PROVIDER="deepseek"    # preset name
-export AI_MODEL="deepseek-chat"  # model override
-export AI_BASE_URL="..."         # custom OpenAI-compatible endpoint
+export AI_API_KEY="your_api_key_here"
+export AI_PROVIDER="openrouter"
+export AI_MODEL="qwen/qwen3-vl-32b-instruct"
 export WATCH_DIR="./Temporary/Unprocessed"
 ```
 
-### CLI
-
-| Flag | Purpose |
-| --- | --- |
-| `--gui` | Launch the PyWebView Desktop GUI |
-| `--watch-dir PATH` | Add or override the directory to watch |
-| `--output-dir PATH` | Where AI response files are written |
-| `--provider NAME` | Provider preset (`openrouter`, `deepseek`, `openai`, `groq`) |
-| `--mock` | Full pipeline, zero network calls — safe dry run |
-| `--workers N` | Worker thread count (default 2) |
-| `--enable-wrapup` / `--disable-wrapup` | Turn automatic batch wrap-up on/off |
-| `--wrap-batch` | Force wrap-up of the current batch on exit |
-| `--wrap` | Signal a running daemon to wrap up now |
-| `--batch-export PATH` | Export queued files as a JSONL batch-API manifest and exit |
-| `--demo` | Demonstrate runtime watch-path swapping |
-
-### Tests
+### Running the Test Suite
+The project includes a comprehensive suite of **73 automated unit tests** covering the desktop bridge, watchdog file-system monitoring, file write-lock stability verification, AI dispatchers, rename rules, client routing, and instruction managers:
 
 ```bash
 python -m unittest discover tests
 ```
+*Expected output: `Ran 73 tests in ...s - OK`*
 
-Nine modules, 50 tests, all passing (`python -m unittest discover tests`): Desktop GUI bridge, daemon lifecycle, the queue and dispatcher behaviour, stability gate, rename and client-name rules, and end-to-end pipeline execution with synthesized documents.
-
-### Deployment
-
+### Building Standalone Executable & Installer
+To build the distribution executable and installer on Windows:
 ```bash
-docker-compose up -d
+# 1. Build the standalone portable application folder in dist/:
+python build_exe.py
+
+# 2. Build the Windows Setup Installer wizard:
+installer\build_installer.bat
 ```
 
-Or on a plain Linux host, use the bundled unit — `deployment/ai-ingest.service` — with `WorkingDirectory` pointed at the checkout and `AI_API_KEY` supplied through an environment file rather than inlined in the unit.
+### Docker & Linux Service Deployment
+For Linux or Docker deployments:
+```bash
+# Docker Compose:
+docker-compose up -d
+
+# Or run as a systemd service:
+# Install deployment/ai-ingest.service to /etc/systemd/system/
+sudo systemctl enable --now ai-ingest.service
+```
 
 ---
 
-## Privacy & data handling
+## 🛡️ Privacy & Security Commitment
 
-> **Nothing about your files is committed here.** `.gitignore` ignores *everything* at the repo root and whitelists only code, docs and templates. Client folders, scanned PDFs, `.docx` files, `settings.json`, `.env` and generated logs cannot be staged — so client names and documents never reach git history.
-
-- **Outbound:** one document's extracted text per classification request, sent over HTTPS to the provider you configure with your own key. Nothing else is transmitted — no filenames from your disk, no folder listings, no telemetry.
-- **Offline:** `python main.py --mock` runs the entire pipeline with no network calls.
-- **Secrets:** the API key lives in `settings.json` or the environment. Keep it out of version control (already the default here) and use a revocable, spend-capped key.
-- **Client data stays client data:** if a provider's data-retention policy is unacceptable for your documents, point `AI_BASE_URL` at a self-hosted OpenAI-compatible model, or run in mock mode.
+- **Local First**: Files are never moved outside your local network unless you explicitly provide an API key for a cloud vision provider.
+- **Zero Disk Exposure**: Only the specific document being classified is read. Directory listings, other client folders, and unrelated files are never accessed or transmitted.
+- **Repository Safety**: The `.gitignore` is structured as a strict security allowlist. Client folders, scanned PDFs, Word documents, `.env` files, and `settings.json` can never be tracked by git.
 
 ---
 
-## Design background
-
-`Python AI Script Roadmap.txt` is the research write-up behind the architecture: OS file-system notification interfaces, debounce and lock-verification strategies, dynamic watch-path swapping, and the cost analysis that drove the model-provider choices.
-
----
-
-## License
+## 📄 License
 
 **PolyForm Noncommercial License 1.0.0** — see [LICENSE](LICENSE).
 
-You may use, modify and share this software for **any noncommercial purpose** (personal use, study, hobby projects, research, and by charities, schools, public research bodies and government institutions). You may **not** use it commercially, and you may **not** sell it or a modified version of it.
+You may use, modify, and share this software for **any noncommercial purpose** (personal use, study, hobby projects, research, charities, schools, public research bodies, and non-profit institutions). You may **not** use it commercially, and you may **not** sell it or a modified version of it.
 
-Required Notice: Copyright (c) 2026 Lumi-nary (<https://github.com/Lumi-nary>)
-
-This is a source-available license, not an OSI-approved open-source license — the restriction on commercial use is deliberate. If you redistribute a modified copy, you must pass these terms along with it.
+*Required Notice:* Copyright (c) 2026 Lumi-nary (<https://github.com/Lumi-nary>)
