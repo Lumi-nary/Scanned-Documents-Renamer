@@ -35,8 +35,6 @@
 !/src/**
 !/tests/
 !/tests/**
-!/scripts/
-!/scripts/**
 !/deployment/
 !/deployment/**
 
